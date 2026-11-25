@@ -157,6 +157,11 @@
       text-shadow: 0 1px 8px rgba(255, 255, 255, 0.9);
     }
 
+    .loading-heart {
+      display: inline-block;
+      filter: drop-shadow(0 0 1px rgba(17, 17, 17, 0.55));
+    }
+
     @keyframes loadingPopIn {
       from {
         opacity: 0;
@@ -755,15 +760,15 @@
 <body class="is-loading" data-loading="active" data-projection="perspective" data-preset="isometric" data-ui="visible" data-editor="closed" data-controls="closed">
   <div id="viewport" data-testid="maquette-viewport"></div>
 
-  <div id="loading-screen" class="loading-screen" role="status" aria-live="polite" aria-label="Loading SMAN 66 versi digital">
+  <div id="loading-screen" class="loading-screen" role="status" aria-live="polite" aria-label="Loading SMAN 66 digitalized">
     <div class="loading-center">
       <div class="loading-title">SMAN 66</div>
-      <div class="loading-subtitle">versi digital</div>
+      <div class="loading-subtitle">digitalized</div>
       <div class="loading-track" aria-hidden="true">
         <div class="loading-bar"></div>
       </div>
     </div>
-    <div class="loading-footer">buatan aliyu</div>
+    <div class="loading-footer">made with <span class="loading-heart">🤍</span> - leeyou</div>
   </div>
 
   <header class="title-plate" aria-label="Architectural Model Title">
@@ -1837,28 +1842,31 @@
     function buildSwitchbackStairwell(parent, {
       x, z, rotY = 0,
       bayW = 3.8,
-      shaftD = 4.6,
+      shaftD = 5.4,
       floorH = 3.5,
       floors = 3,
       hasRoofCutout = false,
     }) {
+      // Strictly recessed inside classroom core: ALL geometry stays within local z in [-shaftD, 0]
+      // Local z = 0 sits flush with the inner classroom wall so ZERO steps, rails, or slabs protrude into corridors!
       const sg = new THREE.Group();
       sg.position.set(x, 0, z);
       sg.rotation.y = rotY;
       const totalH = floorH * floors; // 10.5m
 
-      // Enclosing recessed concrete stairwell shaft walls (Left, Right, Back)
+      // Enclosing recessed concrete stairwell shaft walls (Left, Right, Back — strictly z <= 0)
       addBox(sg, 0.22, totalH, shaftD, MAT_OFFWHITE, { x: -bayW / 2 + 0.11, y: totalH / 2 + 0.25, z: -shaftD / 2 });
       addBox(sg, 0.22, totalH, shaftD, MAT_OFFWHITE, { x: bayW / 2 - 0.11, y: totalH / 2 + 0.25, z: -shaftD / 2 });
       addBox(sg, bayW, totalH, 0.24, MAT_OFFWHITE, { x: 0, y: totalH / 2 + 0.25, z: -shaftD + 0.12 });
-      // Recessed dark-grey floor base inside shaft
+      // Recessed floor base inside shaft
       addBox(sg, bayW - 0.2, 0.24, shaftD, MAT_LIGHT_GREY, { x: 0, y: 0.12, z: -shaftD / 2 });
 
       // Wide concrete switchback flights (12 treads per half-flight) + mid-level bordes landing + handrails
       const treadsPerHalf = 12;
       const flightW = (bayW - 0.62) / 2;
-      const bordesDepth = 1.28;
-      const flightRunTotal = shaftD - bordesDepth - 0.56;
+      const bordesDepth = 1.25;
+      const landingDepth = 0.68;
+      const flightRunTotal = shaftD - bordesDepth - landingDepth - 0.28;
       const treadRun = flightRunTotal / treadsPerHalf;
       const treadRise = (floorH / 2) / treadsPerHalf;
       const flightSlope = Math.atan2(floorH / 2, flightRunTotal);
@@ -1869,101 +1877,95 @@
         const midY = baseY + floorH / 2;
         const topY = baseY + floorH;
 
-        // Mid-level concrete landing (bordes) against back wall
+        // Mid-level concrete landing (bordes) against recessed back wall
         addBox(sg, bayW - 0.34, 0.22, bordesDepth, MAT_WHITE, {
-          x: 0, y: midY, z: -shaftD + 0.22 + bordesDepth / 2,
+          x: 0, y: midY, z: -shaftD + 0.24 + bordesDepth / 2,
         });
-        // Back wall & central divider handrails at bordes
+        // Back wall handrail at bordes
         addBox(sg, bayW - 0.55, 0.055, 0.055, MAT_GATE_BLACK, {
-          x: 0, y: midY + 0.92, z: -shaftD + 0.34, castShadow: false,
+          x: 0, y: midY + 0.92, z: -shaftD + 0.36, castShadow: false,
         });
 
-        // 1st Half-Flight (Left lane: ascends from front z = -0.34 toward back bordes)
+        // 1st Half-Flight (Left lane: ascends inward from recessed entry landing z = -landingDepth toward back bordes)
         const leftCX = -flightW / 2 - 0.08;
         for (let t = 0; t < treadsPerHalf; t++) {
           const ty = baseY + (t + 0.5) * treadRise;
-          const tz = -0.34 - (t + 0.5) * treadRun;
+          const tz = -landingDepth - (t + 0.5) * treadRun;
           addBox(sg, flightW, treadRise + 0.06, treadRun + 0.04, MAT_WHITE, {
             x: leftCX, y: ty, z: tz, castShadow: true, receiveShadow: true,
           });
         }
-        // Angled dark handrails flanking 1st half-flight
         for (const hx of [-bayW / 2 + 0.28, -0.08]) {
           addBox(sg, 0.05, 0.06, railLen, MAT_GATE_BLACK, {
             x: hx,
             y: baseY + floorH / 4 + 0.90,
-            z: -0.34 - flightRunTotal / 2,
+            z: -landingDepth - flightRunTotal / 2,
             rx: flightSlope,
             castShadow: false,
           });
         }
 
-        // 2nd Half-Flight (Right lane: ascends from back bordes forward to upper corridor landing)
+        // 2nd Half-Flight (Right lane: ascends from back bordes forward to recessed upper landing at z = -landingDepth)
         const rightCX = flightW / 2 + 0.08;
         for (let t = 0; t < treadsPerHalf; t++) {
           const ty = midY + (t + 0.5) * treadRise;
-          const tz = -0.34 - flightRunTotal + (t + 0.5) * treadRun;
+          const tz = -landingDepth - flightRunTotal + (t + 0.5) * treadRun;
           addBox(sg, flightW, treadRise + 0.06, treadRun + 0.04, MAT_WHITE, {
             x: rightCX, y: ty, z: tz, castShadow: true, receiveShadow: true,
           });
         }
-        // Angled dark handrails flanking 2nd half-flight
         for (const hx of [0.08, bayW / 2 - 0.28]) {
           addBox(sg, 0.05, 0.06, railLen, MAT_GATE_BLACK, {
             x: hx,
             y: midY + floorH / 4 + 0.90,
-            z: -0.34 - flightRunTotal / 2,
+            z: -landingDepth - flightRunTotal / 2,
             rx: -flightSlope,
             castShadow: false,
           });
         }
 
-        // Upper corridor landing slab flush with floor slab
-        addBox(sg, bayW - 0.16, 0.24, 0.52, MAT_OFFWHITE, { x: 0, y: topY, z: -0.22 });
+        // Recessed upper landing slab flush with corridor edge (z in [-landingDepth, 0], ZERO protrusion past z = 0)
+        addBox(sg, bayW - 0.16, 0.24, landingDepth, MAT_OFFWHITE, { x: 0, y: topY, z: -landingDepth / 2 });
       }
 
-      // Thin Vertical-and-Diagonal Grid Safety Grille (Teralis) across the open courtyard-facing bay (z = -0.02)
-      // Matches real steel teralis photo (1001282167.jpg) in crisp monochrome linework!
-      const grilleZ = -0.04;
+      // Recessed Vertical-and-Diagonal Safety Grille (Teralis) flush inside the classroom wall (z = -0.06)
+      // Screens the stair-drop right half while keeping a clean open entry portal on EVERY floor (1F, 2F, 3F)!
+      const grilleZ = -0.06;
       const gHalfW = bayW / 2 - 0.22;
-      // Vertical steel mullions running full height (ground floor left half stays open for entry passage)
-      for (const gx of [-gHalfW, -gHalfW * 0.34, gHalfW * 0.34, gHalfW]) {
-        const startY = gx < 0 ? 0.25 + floorH : 0.25;
-        const barH = totalH + 0.25 - startY;
-        addBox(sg, 0.055, barH, 0.055, MAT_DARK_GREY, { x: gx, y: startY + barH / 2, z: grilleZ, castShadow: false });
+      for (const gx of [-0.04, gHalfW * 0.48, gHalfW]) {
+        addBox(sg, 0.055, totalH, 0.055, MAT_DARK_GREY, { x: gx, y: 0.25 + totalH / 2, z: grilleZ, castShadow: false });
       }
-      // Horizontal transoms & crisp diagonal X-grid safety bars on each story bay
+      // Clean vertical frame jamb on open doorway left edge
+      addBox(sg, 0.055, totalH, 0.055, MAT_DARK_GREY, { x: -gHalfW, y: 0.25 + totalH / 2, z: grilleZ, castShadow: false });
       for (let f = 0; f < floors; f++) {
         const fy = 0.25 + f * floorH;
-        const isGround = f === 0;
-        const barMinX = isGround ? -gHalfW * 0.34 : -gHalfW;
-        const barW = gHalfW - barMinX;
-        const barCX = (barMinX + gHalfW) / 2;
-        // Bottom, mid, and top horizontal grille rails
-        for (const hy of [fy + 0.22, fy + 1.35, fy + 2.45]) {
+        // Doorway header transom across full stairwell bay width (leaving 2.45m clear headroom on every floor!)
+        addBox(sg, bayW - 0.44, 0.08, 0.08, MAT_DARK_GREY, { x: 0, y: fy + 2.55, z: grilleZ, castShadow: false });
+        // Safety grille rails & diagonal X-bracing strictly on the right safety panel (x: -0.04..+gHalfW)
+        const barW = gHalfW + 0.04;
+        const barCX = (gHalfW - 0.04) / 2;
+        for (const hy of [fy + 0.22, fy + 1.38, fy + 2.50]) {
           addBox(sg, barW, 0.055, 0.055, MAT_DARK_GREY, { x: barCX, y: hy, z: grilleZ, castShadow: false });
         }
-        // Diagonal brace struts across the right & middle safety panels (signature teralis geometry!)
-        const panelCols = isGround ? [[gHalfW * 0.34, gHalfW], [-gHalfW * 0.34, gHalfW * 0.34]] : [[-gHalfW, -gHalfW * 0.34], [-gHalfW * 0.34, gHalfW * 0.34], [gHalfW * 0.34, gHalfW]];
+        const panelCols = [[-0.04, gHalfW * 0.48], [gHalfW * 0.48, gHalfW]];
         for (const [px0, px1] of panelCols) {
           const pw = px1 - px0;
           const pcx = (px0 + px1) / 2;
           const diagLen = Math.hypot(pw, 1.12);
           const diagAng = Math.atan2(1.12, pw);
-          addBox(sg, diagLen, 0.045, 0.045, MAT_DARK_GREY, { x: pcx, y: fy + 0.78, z: grilleZ, rz: diagAng, castShadow: false });
-          addBox(sg, diagLen, 0.045, 0.045, MAT_DARK_GREY, { x: pcx, y: fy + 1.90, z: grilleZ, rz: -diagAng, castShadow: false });
+          addBox(sg, diagLen, 0.045, 0.045, MAT_DARK_GREY, { x: pcx, y: fy + 0.80, z: grilleZ, rz: diagAng, castShadow: false });
+          addBox(sg, diagLen, 0.045, 0.045, MAT_DARK_GREY, { x: pcx, y: fy + 1.94, z: grilleZ, rz: -diagAng, castShadow: false });
         }
       }
 
-      // Optional top 3rd-floor stairwell roof/landing cutout (dashed red square in Inner Courtyard Core!)
+      // Optional top 3rd-floor stairwell skylight cutout centered cleanly over the recessed stairwell shaft
       if (hasRoofCutout) {
         const cutY = totalH + 0.25;
-        // Raised coffered landing skylight/cutout frame crowning the 3rd-floor stairwell shaft
-        addBox(sg, bayW + 0.16, 0.34, 2.4, MAT_WHITE, { x: 0, y: cutY + 0.16, z: -1.2 });
-        addBox(sg, bayW - 0.5, 0.14, 1.7, MAT_DARK_GREY, { x: 0, y: cutY + 0.32, z: -1.2, castShadow: false });
-        // Crisp louver bars across the top stairwell cutout
+        const cutZ = -shaftD / 2;
+        addBox(sg, bayW + 0.16, 0.34, 2.4, MAT_WHITE, { x: 0, y: cutY + 0.16, z: cutZ });
+        addBox(sg, bayW - 0.5, 0.14, 1.7, MAT_DARK_GREY, { x: 0, y: cutY + 0.32, z: cutZ, castShadow: false });
         for (let lx = -bayW / 2 + 0.55; lx <= bayW / 2 - 0.55; lx += 0.45) {
-          addBox(sg, 0.05, 0.12, 1.65, MAT_WHITE, { x: lx, y: cutY + 0.36, z: -1.2, castShadow: false });
+          addBox(sg, 0.05, 0.12, 1.65, MAT_WHITE, { x: lx, y: cutY + 0.36, z: cutZ, castShadow: false });
         }
       }
 
@@ -1981,40 +1983,39 @@
       const floors = 3;
       const totalH = floorH * floors; // 10.5m
 
-      // Stairwell #1 bay in middle of Gedung B N-S Wing (solid red rectangle in Screenshot 213131):
-      // Z = -3.4 to +0.6 (width 4.0m, centered at Z = -1.4, opening toward basketball court at X = -24.5)
+      // Stairwell #1 bay recessed COMPLETELY INSIDE Gedung B N-S classroom core (X: -33.0..-27.2, Z: -3.4..+0.6)
+      // Leaves the entire 2.7m walkway corridor (X: -27.2..-24.5) 100% continuous & unobstructed on all 3 floors!
       const stMinZ = -3.4;
       const stMaxZ = 0.6;
       const stCZ = (stMinZ + stMaxZ) / 2;
 
       // --- 1) Main North-South 3-Story Wing (X: -35.0 to -24.5, Z: -25.0 to +13.5) ---
-      // Classroom core split cleanly around the recessed middle-bay switchback stairwell!
+      // Classroom core (X: -35.0..-27.2) split cleanly around the recessed middle-bay switchback stairwell!
       addBox(g, 7.8, totalH, 12.9, MAT_WHITE, { x: -31.1, y: totalH / 2 + 0.25, z: 7.05 });    // North segment (Z: 0.6..13.5)
       addBox(g, 7.8, totalH, 21.6, MAT_WHITE, { x: -31.1, y: totalH / 2 + 0.25, z: -14.2 });   // South segment (Z: -25.0..-3.4)
-      addBox(g, 5.7, totalH, 4.0, MAT_WHITE,  { x: -32.15, y: totalH / 2 + 0.25, z: stCZ });   // Solid rear core behind stairwell (X: -35.0..-29.3)
+      addBox(g, 2.0, totalH, 4.0, MAT_WHITE,  { x: -34.0, y: totalH / 2 + 0.25, z: stCZ });    // Solid outer rear wall behind stairwell (X: -35.0..-33.0)
+      // Solid outer SW corner classroom filler (X: -27.2..-24.5, Z: -25.0..-17.2) so L-turn corridor stops cleanly at Z = -17.2
+      addBox(g, 2.7, totalH, 7.8, MAT_WHITE,  { x: -25.85, y: totalH / 2 + 0.25, z: -21.1 });
       addBox(g, 10.7, 0.25, 38.7, MAT_LIGHT_GREY, { x: -29.75, y: 0.125, z: -5.75 });
 
       for (let f = 0; f < floors; f++) {
         const baseY = 0.25 + f * floorH;
         if (f > 0) {
-          // Corridor slabs & parapets split cleanly around middle stairwell bay (Z = -3.4..+0.6)
-          addBox(g, 2.8, 0.26, 12.9, MAT_OFFWHITE, { x: -25.8, y: baseY, z: 7.05 });
-          addBox(g, 0.22, 1.02, 12.8, MAT_OFFWHITE, { x: -24.52, y: baseY + 0.62, z: 7.05 });
-          addBox(g, 0.06, 0.06, 12.8, MAT_DARK_GREY, { x: -24.52, y: baseY + 1.24, z: 7.05, castShadow: false });
-
-          addBox(g, 2.8, 0.26, 21.6, MAT_OFFWHITE, { x: -25.8, y: baseY, z: -14.2 });
-          addBox(g, 0.22, 1.02, 21.5, MAT_OFFWHITE, { x: -24.52, y: baseY + 0.62, z: -14.2 });
-          addBox(g, 0.06, 0.06, 21.5, MAT_DARK_GREY, { x: -24.52, y: baseY + 1.24, z: -14.2, castShadow: false });
+          // 100% CONTINUOUS unbroken corridor floor slab along X: -27.2..-24.5 from Z = -17.2 to +13.5!
+          addBox(g, 2.7, 0.26, 30.7, MAT_OFFWHITE, { x: -25.85, y: baseY, z: -1.85 });
+          // Continuous corridor parapet & handrail along X = -24.52 from Z = -14.52 to +13.5 (stops cleanly at L-corner!)
+          addBox(g, 0.22, 1.02, 28.02, MAT_OFFWHITE, { x: -24.52, y: baseY + 0.62, z: -0.51 });
+          addBox(g, 0.06, 0.06, 28.02, MAT_DARK_GREY, { x: -24.52, y: baseY + 1.24, z: -0.51, castShadow: false });
 
           // North end balcony parapet return & side sun-visor louver hoods
-          addBox(g, 2.8, 1.02, 0.22, MAT_OFFWHITE, { x: -25.8, y: baseY + 0.62, z: 13.4 });
+          addBox(g, 2.7, 1.02, 0.22, MAT_OFFWHITE, { x: -25.85, y: baseY + 0.62, z: 13.4 });
           addArchMesh(g, createLeanToEaveGeo(2.4, 0.95, 0.36), MAT_WHITE, {
-            x: -25.8, y: baseY + 2.45, z: 13.95,
+            x: -25.85, y: baseY + 2.45, z: 13.95,
           });
         }
         for (let z = -22.5; z <= 11.5; z += 4.2) {
-          // Skip front courtyard-facing classroom window inside the recessed middle stairwell bay
-          if (z < stMinZ - 0.6 || z > stMaxZ + 0.6) {
+          // Skip front courtyard-facing classroom window inside the recessed middle stairwell bay & behind SW corner
+          if (z > -16.2 && (z < stMinZ - 0.6 || z > stMaxZ + 0.6)) {
             addBox(g, 0.14, 1.45, 2.35, MAT_MED_GREY, { x: -27.18, y: baseY + 2.05, z, castShadow: false });
             if (Math.round(z) % 2 === 0 && (z + 1.65 < stMinZ || z + 1.65 > stMaxZ)) {
               addBox(g, 0.14, 2.25, 1.05, MAT_DARK_GREY, { x: -27.18, y: baseY + 1.15, z: z + 1.65, castShadow: false });
@@ -2025,15 +2026,15 @@
       }
       addBox(g, 10.9, 0.28, 38.8, MAT_OFFWHITE, { x: -29.75, y: totalH + 0.25, z: -5.75 });
 
-      for (let z = -24.6; z <= 13.4; z += 4.22) {
-        addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x: -24.65, y: totalH / 2 + 0.25, z });
+      // Corridor edge columns strictly along open courtyard face Z = -14.65..+13.4 (zero columns blocking L-turn!)
+      for (const cz of [-14.65, -10.65, -6.65, -2.65, 1.35, 5.35, 9.35, 13.35]) {
+        addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x: -24.65, y: totalH / 2 + 0.25, z: cz });
       }
 
-      // STAIRWELL #1: Full-height 3-story recessed switchback stairwell in middle bay of Gedung B!
-      // (Replaces deleted corner exterior stair per Edit 6)
+      // STAIRWELL #1: Recessed COMPLETELY INSIDE Gedung B classroom wall (x = -27.20, X: -33.0..-27.2)
       buildSwitchbackStairwell(g, {
-        x: -24.55, z: stCZ, rotY: Math.PI / 2,
-        bayW: 3.9, shaftD: 4.75, floorH, floors,
+        x: -27.20, z: stCZ, rotY: Math.PI / 2,
+        bayW: 3.9, shaftD: 5.8, floorH, floors,
       });
 
       // North Gable Facade Decorative Geometric Screen Panel + Framed Banner Bay
@@ -2051,7 +2052,7 @@
       for (let f = 0; f < floors; f++) {
         const baseY = 0.25 + f * floorH;
         if (f > 0) {
-          addBox(g, 13.5, 0.26, 2.8, MAT_OFFWHITE, { x: -17.75, y: baseY, z: -15.8 });
+          addBox(g, 13.5, 0.26, 2.7, MAT_OFFWHITE, { x: -17.75, y: baseY, z: -15.85 });
           addBox(g, 13.5, 1.02, 0.22, MAT_OFFWHITE, { x: -17.75, y: baseY + 0.62, z: -14.52 });
           addBox(g, 13.5, 0.06, 0.06, MAT_DARK_GREY, { x: -17.75, y: baseY + 1.24, z: -14.52, castShadow: false });
         }
@@ -2061,8 +2062,8 @@
         }
       }
       addBox(g, 13.8, 0.28, 10.9, MAT_OFFWHITE, { x: -17.75, y: totalH + 0.25, z: -19.75 });
-      for (let x = -24.5; x <= -11.2; x += 4.4) {
-        addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x, y: totalH / 2 + 0.25, z: -14.65 });
+      for (const cx of [-20.1, -15.6, -11.2]) {
+        addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x: cx, y: totalH / 2 + 0.25, z: -14.65 });
       }
 
       // --- 3) SHARP TRIANGULAR GABLE ROOF WITH CRISP WHITE FASCIA TRIM (LISPLANG) & DEEP EAVES ---
@@ -2314,9 +2315,12 @@
         minX, maxX, minZ, maxZ,
         corridorSide,
         outerEaveSide = null,
-        corridorMaxZ = maxZ,
-        stairCutoutZ = null, // [cutMinZ, cutMaxZ] for recessed stairwell along Z-running wing
-        stairCutoutX = null, // [cutMinX, cutMaxX] for recessed stairwell along X-running wing
+        parapetSegments = null, // Array of [start, end] spans along the corridor edge (keeps all 4 inner L-turns 100% open!)
+        columnPositions = null, // Explicit column coordinates along corridor edge (aligned cleanly at 4 inner corners!)
+        stairCutoutZ = null,    // [cutMinZ, cutMaxZ] for recessed stairwell strictly INSIDE classroom core (X: 4.5..10.7)
+        stairCutoutX = null,    // [cutMinX, cutMaxX] for recessed stairwell strictly INSIDE classroom core (Z: 7.8..14.0)
+        windowMinZ = minZ + 2.4,
+        windowMaxZ = maxZ - 2.4,
       }) => {
         const w = maxX - minX;
         const d = maxZ - minZ;
@@ -2327,25 +2331,26 @@
         addBox(g, w + 0.2, 0.25, d + 0.2, MAT_LIGHT_GREY, { x: cx, y: 0.125, z: cz });
 
         let coreW = w, coreD = d, coreCX = cx, coreCZ = cz;
-        if (corridorSide === 'east')  { coreW = w - corrW; coreCX = minX + coreW / 2; }
-        if (corridorSide === 'west')  { coreW = w - corrW; coreCX = maxX - coreW / 2; }
-        if (corridorSide === 'north') { coreD = d - corrW; coreCZ = minZ + coreD / 2; }
-        if (corridorSide === 'south') { coreD = d - corrW; coreCZ = maxZ - coreD / 2; }
+        let corrCX = cx, corrCZ = cz;
+        if (corridorSide === 'east')  { coreW = w - corrW; coreCX = minX + coreW / 2; corrCX = maxX - corrW / 2; }
+        if (corridorSide === 'west')  { coreW = w - corrW; coreCX = maxX - coreW / 2; corrCX = minX + corrW / 2; }
+        if (corridorSide === 'north') { coreD = d - corrW; coreCZ = minZ + coreD / 2; corrCZ = maxZ - corrW / 2; }
+        if (corridorSide === 'south') { coreD = d - corrW; coreCZ = maxZ - coreD / 2; corrCZ = minZ + corrW / 2; }
 
-        // Split classroom core cleanly around any recessed switchback stairwell bay!
+        // Split ONLY the classroom core cleanly around any recessed switchback stairwell bay!
+        // Stairwell shaft occupies 5.4m inside the 6.2m classroom core, leaving 0.8m solid outer wall behind it.
         if (stairCutoutZ) {
           const [s0, s1] = stairCutoutZ;
           if (s0 > minZ + 0.2) addBox(g, coreW, totalH, s0 - minZ, MAT_WHITE, { x: coreCX, y: totalH / 2 + 0.25, z: (minZ + s0) / 2 });
           if (maxZ > s1 + 0.2) addBox(g, coreW, totalH, maxZ - s1, MAT_WHITE, { x: coreCX, y: totalH / 2 + 0.25, z: (s1 + maxZ) / 2 });
-          // Solid rear wall behind the recessed stairwell shaft
-          const backW = Math.max(0.5, coreW - 2.6);
+          const backW = Math.max(0.5, coreW - 5.4);
           const backX = corridorSide === 'east' ? minX + backW / 2 : maxX - backW / 2;
           addBox(g, backW, totalH, s1 - s0, MAT_WHITE, { x: backX, y: totalH / 2 + 0.25, z: (s0 + s1) / 2 });
         } else if (stairCutoutX) {
           const [s0, s1] = stairCutoutX;
           if (s0 > minX + 0.2) addBox(g, s0 - minX, totalH, coreD, MAT_WHITE, { x: (minX + s0) / 2, y: totalH / 2 + 0.25, z: coreCZ });
           if (maxX > s1 + 0.2) addBox(g, maxX - s1, totalH, coreD, MAT_WHITE, { x: (s1 + maxX) / 2, y: totalH / 2 + 0.25, z: coreCZ });
-          const backD = Math.max(0.5, coreD - 2.6);
+          const backD = Math.max(0.5, coreD - 5.4);
           const backZ = corridorSide === 'south' ? maxZ - backD / 2 : minZ + backD / 2;
           addBox(g, s1 - s0, totalH, backD, MAT_WHITE, { x: (s0 + s1) / 2, y: totalH / 2 + 0.25, z: backZ });
         } else {
@@ -2355,69 +2360,54 @@
         for (let f = 0; f < floors; f++) {
           const baseY = 0.25 + f * floorH;
           if (f > 0) {
-            // Split floor slab cleanly around recessed stairwell shaft so stairs are never blocked!
+            // CONTINUOUS UNBROKEN 2.3m CORRIDOR FLOOR SLAB + classroom floor slab split ONLY inside recessed stairwell shaft!
             if (stairCutoutZ) {
               const [s0, s1] = stairCutoutZ;
-              if (s0 > minZ + 0.2) addBox(g, w, 0.24, s0 - minZ, MAT_OFFWHITE, { x: cx, y: baseY, z: (minZ + s0) / 2 });
-              if (maxZ > s1 + 0.2) addBox(g, w, 0.24, maxZ - s1, MAT_OFFWHITE, { x: cx, y: baseY, z: (s1 + maxZ) / 2 });
+              // Unbroken full-length corridor slab (never cut across stairwell!)
+              addBox(g, corrW, 0.24, d, MAT_OFFWHITE, { x: corrCX, y: baseY, z: cz });
+              // Classroom core slabs split around stairwell shaft
+              if (s0 > minZ + 0.2) addBox(g, coreW, 0.24, s0 - minZ, MAT_OFFWHITE, { x: coreCX, y: baseY, z: (minZ + s0) / 2 });
+              if (maxZ > s1 + 0.2) addBox(g, coreW, 0.24, maxZ - s1, MAT_OFFWHITE, { x: coreCX, y: baseY, z: (s1 + maxZ) / 2 });
             } else if (stairCutoutX) {
               const [s0, s1] = stairCutoutX;
-              if (s0 > minX + 0.2) addBox(g, s0 - minX, 0.24, d, MAT_OFFWHITE, { x: (minX + s0) / 2, y: baseY, z: cz });
-              if (maxX > s1 + 0.2) addBox(g, maxX - s1, 0.24, d, MAT_OFFWHITE, { x: (s1 + maxX) / 2, y: baseY, z: cz });
+              // Unbroken full-width corridor slab (never cut across stairwell!)
+              addBox(g, w, 0.24, corrW, MAT_OFFWHITE, { x: cx, y: baseY, z: corrCZ });
+              // Classroom core slabs split around stairwell shaft
+              if (s0 > minX + 0.2) addBox(g, s0 - minX, 0.24, coreD, MAT_OFFWHITE, { x: (minX + s0) / 2, y: baseY, z: coreCZ });
+              if (maxX > s1 + 0.2) addBox(g, maxX - s1, 0.24, coreD, MAT_OFFWHITE, { x: (s1 + maxX) / 2, y: baseY, z: coreCZ });
             } else {
               addBox(g, w, 0.24, d, MAT_OFFWHITE, { x: cx, y: baseY, z: cz });
             }
 
+            // Inner courtyard balcony parapets & top handrails — cleanly mitered at all 4 inner corners, ZERO blocking across L-turns!
             const pY = baseY + 0.62;
             const rY = baseY + 1.24;
-            if (corridorSide === 'east') {
-              const pEnd = corridorMaxZ;
-              if (stairCutoutZ) {
-                const [s0, s1] = stairCutoutZ;
-                if (s0 > minZ + 0.2) {
-                  addBox(g, 0.22, 1.0, s0 - minZ, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: (minZ + s0) / 2 });
-                  addBox(g, 0.06, 0.06, s0 - minZ, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: (minZ + s0) / 2, castShadow: false });
-                }
-                if (pEnd > s1 + 0.2) {
-                  addBox(g, 0.22, 1.0, pEnd - s1, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: (s1 + pEnd) / 2 });
-                  addBox(g, 0.06, 0.06, pEnd - s1, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: (s1 + pEnd) / 2, castShadow: false });
-                }
-              } else {
-                const pLen = pEnd - minZ;
-                const pCZ = (minZ + pEnd) / 2;
-                addBox(g, 0.22, 1.0, pLen, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: pCZ });
-                addBox(g, 0.06, 0.06, pLen, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: pCZ, castShadow: false });
+            const segs = parapetSegments || (
+              (corridorSide === 'east' || corridorSide === 'west') ? [[minZ, maxZ]] : [[minX, maxX]]
+            );
+            for (const [p0, p1] of segs) {
+              const pLen = p1 - p0;
+              const pMid = (p0 + p1) / 2;
+              if (corridorSide === 'east') {
+                addBox(g, 0.22, 1.0, pLen, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: pMid });
+                addBox(g, 0.06, 0.06, pLen, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: pMid, castShadow: false });
+              } else if (corridorSide === 'west') {
+                addBox(g, 0.22, 1.0, pLen, MAT_OFFWHITE, { x: minX + 0.12, y: pY, z: pMid });
+                addBox(g, 0.06, 0.06, pLen, MAT_DARK_GREY, { x: minX + 0.12, y: rY, z: pMid, castShadow: false });
+              } else if (corridorSide === 'south') {
+                addBox(g, pLen, 1.0, 0.22, MAT_OFFWHITE, { x: pMid, y: pY, z: minZ + 0.12 });
+                addBox(g, pLen, 0.06, 0.06, MAT_DARK_GREY, { x: pMid, y: rY, z: minZ + 0.12, castShadow: false });
+              } else if (corridorSide === 'north') {
+                addBox(g, pLen, 1.0, 0.22, MAT_OFFWHITE, { x: pMid, y: pY, z: maxZ - 0.12 });
+                addBox(g, pLen, 0.06, 0.06, MAT_DARK_GREY, { x: pMid, y: rY, z: maxZ - 0.12, castShadow: false });
               }
-            } else if (corridorSide === 'west') {
-              const pLen = corridorMaxZ - minZ;
-              const pCZ = (minZ + corridorMaxZ) / 2;
-              addBox(g, 0.22, 1.0, pLen, MAT_OFFWHITE, { x: minX + 0.12, y: pY, z: pCZ });
-              addBox(g, 0.06, 0.06, pLen, MAT_DARK_GREY, { x: minX + 0.12, y: rY, z: pCZ, castShadow: false });
-            } else if (corridorSide === 'south') {
-              if (stairCutoutX) {
-                const [s0, s1] = stairCutoutX;
-                if (s0 > minX + 0.2) {
-                  addBox(g, s0 - minX, 1.0, 0.22, MAT_OFFWHITE, { x: (minX + s0) / 2, y: pY, z: minZ + 0.12 });
-                  addBox(g, s0 - minX, 0.06, 0.06, MAT_DARK_GREY, { x: (minX + s0) / 2, y: rY, z: minZ + 0.12, castShadow: false });
-                }
-                if (maxX > s1 + 0.2) {
-                  addBox(g, maxX - s1, 1.0, 0.22, MAT_OFFWHITE, { x: (s1 + maxX) / 2, y: pY, z: minZ + 0.12 });
-                  addBox(g, maxX - s1, 0.06, 0.06, MAT_DARK_GREY, { x: (s1 + maxX) / 2, y: rY, z: minZ + 0.12, castShadow: false });
-                }
-              } else {
-                addBox(g, w, 1.0, 0.22, MAT_OFFWHITE, { x: cx, y: pY, z: minZ + 0.12 });
-                addBox(g, w, 0.06, 0.06, MAT_DARK_GREY, { x: cx, y: rY, z: minZ + 0.12, castShadow: false });
-              }
-            } else if (corridorSide === 'north') {
-              addBox(g, w, 1.0, 0.22, MAT_OFFWHITE, { x: cx, y: pY, z: maxZ - 0.12 });
-              addBox(g, w, 0.06, 0.06, MAT_DARK_GREY, { x: cx, y: rY, z: maxZ - 0.12, castShadow: false });
             }
           }
 
           if (corridorSide === 'east' || corridorSide === 'west') {
             for (let z = minZ + 2.4; z <= maxZ - 2.4; z += 4.0) {
               const inCut = stairCutoutZ && z >= stairCutoutZ[0] - 0.8 && z <= stairCutoutZ[1] + 0.8;
-              if (!inCut && z <= corridorMaxZ - 0.5) {
+              if (!inCut && z >= windowMinZ && z <= windowMaxZ) {
                 addBox(g, 0.14, 1.4, 2.3, MAT_MED_GREY, {
                   x: corridorSide === 'east' ? coreCX + coreW / 2 + 0.02 : coreCX - coreW / 2 - 0.02,
                   y: baseY + 2.0, z, castShadow: false,
@@ -2458,54 +2448,79 @@
         // Ground-floor wall pilasters & angled structural support brackets under East Wing west cantilevered eave (Edit 2!)
         if (outerEaveSide === 'west') {
           for (let z = -14.0; z <= 13.6; z += 4.0) {
-            // Wall column pilaster
             addBox(g, 0.28, floorH, 0.36, MAT_WHITE, { x: minX - 0.10, y: 0.25 + floorH / 2, z });
-            // Horizontal cantilever bracket arm
             addBox(g, 1.45, 0.16, 0.18, MAT_OFFWHITE, { x: minX - 0.78, y: 3.22, z });
-            // Angled 45° structural knee-brace bracket strut extending from column to outer eave beam
             addBox(g, 1.32, 0.14, 0.14, MAT_LIGHT_GREY, { x: minX - 0.62, y: 2.74, z, rz: -Math.PI / 4 });
           }
-          // Longitudinal eave soffit beam connecting bracket tips above tiled corridor
           addBox(g, 0.18, 0.18, 28.4, MAT_OFFWHITE, { x: minX - 1.42, y: 3.16, z: -0.2 });
         }
 
         addBox(g, w + 0.3, 0.26, d + 0.3, MAT_OFFWHITE, { x: cx, y: totalH + 0.25, z: cz });
 
+        // Support columns aligned cleanly along the inner courtyard edge (never blocking corner L-turns!)
         if (corridorSide === 'east' || corridorSide === 'west') {
           const colX = corridorSide === 'east' ? maxX - 0.24 : minX + 0.24;
-          for (let z = minZ + 0.4; z <= maxZ - 0.3; z += 4.0) {
-            if (corridorSide === 'west' && z > corridorMaxZ + 0.3) continue;
-            const colH = (corridorSide === 'east' && z > corridorMaxZ + 0.3) ? floorH : totalH;
-            addBox(g, 0.44, colH, 0.44, MAT_WHITE, { x: colX, y: colH / 2 + 0.25, z });
+          const cols = columnPositions || [];
+          for (const item of cols) {
+            const zPos = typeof item === 'number' ? item : item.pos;
+            const colH = typeof item === 'number' ? totalH : item.h;
+            addBox(g, 0.44, colH, 0.44, MAT_WHITE, { x: colX, y: colH / 2 + 0.25, z: zPos });
           }
         } else {
           const colZ = corridorSide === 'south' ? minZ + 0.24 : maxZ - 0.24;
-          for (let x = minX + 0.4; x <= maxX - 0.3; x += 4.0) {
-            addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x, y: totalH / 2 + 0.25, z: colZ });
+          const cols = columnPositions || [];
+          for (const xPos of cols) {
+            addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x: xPos, y: totalH / 2 + 0.25, z: colZ });
           }
         }
       };
 
-      // 4 Wings of Gedung A — EXTENDED FULL-SCALE 4-SHAPED RING (Edit 1) with recessed stairwell cutouts (Edit 6)!
-      // 1) East Wing (left of inner courtyard, with Stairwell #2 cutout at Z = -13.4..-9.6 near SE inner corner)
+      // 4 Wings of Gedung A — CONTINUOUS CONNECTED 1F/2F/3F CORRIDORS AROUND ALL 4 CORNERS + FULLY RECESSED STAIRWELLS!
+      // 1) East Wing (left of inner courtyard, Stairwell #2 recessed inside classroom core X: 5.3..10.7 at Z = -13.4..-9.6)
+      //    Parapets run along open courtyard (-13.62..+5.62) and rear tail (-31.5..-22.0), leaving SE corner (-15.8..-13.5) & NE corner (+5.5..+7.8) 100% OPEN!
       buildWing({
         minX: 4.5, maxX: 13.0, minZ: -31.5, maxZ: 14.0,
-        corridorSide: 'east', outerEaveSide: 'west', corridorMaxZ: 5.5,
+        corridorSide: 'east', outerEaveSide: 'west',
+        parapetSegments: [[-31.5, -22.0], [-13.62, 5.62]],
+        columnPositions: [
+          -31.2, -26.7, -22.2,
+          -13.26, -9.56, -5.85, -2.15, 1.56, 5.26,
+          { pos: 13.7, h: floorH }, // Ground-floor portal corner column under 2F/3F skybridge
+        ],
         stairCutoutZ: [-13.4, -9.6],
+        windowMinZ: -30.0, windowMaxZ: 5.2,
       });
-      // 2) West Wing (meets Extended Front-Right L-Wrap Wing cleanly at Z = 14.0 with zero overlap)
+
+      // 2) West Wing (meets Extended Front-Right Wrap cleanly at Z = 14.0)
+      //    Parapet runs strictly along open courtyard (-13.62..+5.62), leaving SW corner (-15.8..-13.5) & NW corner (+5.5..+7.8) 100% OPEN!
       buildWing({
         minX: 29.0, maxX: 37.5, minZ: -22.0, maxZ: 14.0,
-        corridorSide: 'west', corridorMaxZ: 5.5,
+        corridorSide: 'west',
+        parapetSegments: [[-13.62, 5.62]],
+        columnPositions: [-13.26, -9.56, -5.85, -2.15, 1.56, 5.26],
+        windowMinZ: -13.0, windowMaxZ: 5.2,
       });
-      // 3) Inner North Wing (with Stairwell #3 cutout at X = 25.0..28.8 near NW inner corner)
+      // Solid outer corner classroom filler blocks behind West Wing's SW & NW corridor turns (leaves SW & NW 2.3m L-turns 100% open!)
+      addBox(g, 2.3, totalH, 6.2, MAT_WHITE, { x: 30.15, y: totalH / 2 + 0.25, z: -18.9 }); // Outer SW corner (Z: -22.0..-15.8)
+      addBox(g, 2.3, totalH, 6.2, MAT_WHITE, { x: 30.15, y: totalH / 2 + 0.25, z: 10.9 });  // Outer NW corner (Z: +7.8..+14.0)
+
+      // 3) Inner North Wing (Stairwell #3 recessed strictly inside classroom core Z: 7.8..13.2 at X = 25.0..28.8)
+      //    Parapet miters cleanly with Skybridge at X = 20.5 and West Wing at X = 29.12!
       buildWing({
         minX: 20.5, maxX: 29.0, minZ: 5.5, maxZ: 14.0,
         corridorSide: 'south',
+        parapetSegments: [[20.5, 29.12]],
+        columnPositions: [22.4, 25.8],
         stairCutoutX: [25.0, 28.8],
       });
-      // 4) South Wing
-      buildWing({ minX: 13.0, maxX: 29.0, minZ: -22.0, maxZ: -13.5, corridorSide: 'north' });
+
+      // 4) South Wing (parapet runs X: 12.88..29.12, mitering cleanly with East & West Wing parapets at SE & SW corners!)
+      buildWing({
+        minX: 13.0, maxX: 29.0, minZ: -22.0, maxZ: -13.5,
+        corridorSide: 'north',
+        parapetSegments: [[12.88, 29.12]],
+        columnPositions: [16.2, 19.4, 22.6, 25.8],
+      });
 
       // 5) EXTENDED FRONT-RIGHT L-WRAP WING (Edit 1: wraps 90° left along Z = 14.0..24.5 from West Wing to Entrance Plaza edge X = 20.5!)
       const extMinX = 20.5, extMaxX = 37.5;
@@ -2542,17 +2557,18 @@
         }
       }
 
-      // --- STAIRWELL #2 (INNER SE CORNER OF GEDUNG A EAST WING, Z = -13.4..-9.6, Screenshot 213214) ---
+      // --- STAIRWELL #2: RECESSED COMPLETELY INSIDE GEDUNG A EAST WING CLASSROOM CORE (X = 5.30..10.70, Z = -13.4..-9.6) ---
+      // Leaves the entire 2.3m East inner courtyard corridor (X = 10.70..13.00) 100% clear & unobstructed!
       buildSwitchbackStairwell(g, {
-        x: 12.96, z: -11.5, rotY: Math.PI / 2,
-        bayW: 3.7, shaftD: 4.5, floorH, floors,
+        x: 10.70, z: -11.5, rotY: Math.PI / 2,
+        bayW: 3.7, shaftD: 5.4, floorH, floors,
       });
 
-      // --- STAIRWELL #3 (INNER COURTYARD CORE OF GEDUNG A NORTH WING, X = 25.0..28.8, edited-image_2) ---
-      // Includes top 3rd-floor landing/roof cutout frame at dashed red square!
+      // --- STAIRWELL #3: RECESSED COMPLETELY INSIDE GEDUNG A NORTH WING CLASSROOM CORE (Z = 7.80..13.20, X = 25.0..28.8) ---
+      // Leaves the entire 2.3m North inner courtyard corridor (Z = 5.50..7.80) 100% clear & unobstructed!
       buildSwitchbackStairwell(g, {
-        x: 26.9, z: 5.54, rotY: Math.PI,
-        bayW: 3.7, shaftD: 4.6, floorH, floors,
+        x: 26.9, z: 7.80, rotY: Math.PI,
+        bayW: 3.7, shaftD: 5.4, floorH, floors,
         hasRoofCutout: true,
       });
 
@@ -2569,15 +2585,16 @@
       addBox(g, bridgeW, 0.28, 0.34, MAT_LIGHT_GREY, { x: bridgeCX, y: bridgeFloor2Y - 0.26, z: 13.83 });
       addBox(g, bridgeW, 0.28, 0.34, MAT_LIGHT_GREY, { x: bridgeCX, y: bridgeFloor2Y - 0.26, z: 5.67 });
 
-      // Enclosed 2-story bridge block spanning Floors 2 & 3 seamlessly between East & North Wings
+      // Enclosed 2-story bridge classroom block spanning Floors 2 & 3 behind Z = 7.8 (leaving Z = 5.5..7.8 corridor 100% open!)
       addBox(g, 9.76, floorH * 2 - 0.26, 6.2, MAT_WHITE, { x: 15.60, y: bridgeFloor2Y + floorH, z: 10.9 });
       addBox(g, bridgeW, 0.24, bridgeD, MAT_OFFWHITE, { x: bridgeCX, y: bridgeFloor3Y, z: bridgeCZ });
       addBox(g, bridgeW + 0.1, 0.26, bridgeD + 0.3, MAT_OFFWHITE, { x: bridgeCX, y: totalH + 0.25, z: bridgeCZ });
 
       for (let f = 1; f < floors; f++) {
         const baseY = 0.25 + f * floorH;
-        addBox(g, bridgeW, 1.0, 0.22, MAT_OFFWHITE, { x: bridgeCX, y: baseY + 0.62, z: 5.62 });
-        addBox(g, bridgeW, 0.06, 0.06, MAT_DARK_GREY, { x: bridgeCX, y: baseY + 1.24, z: 5.62, castShadow: false });
+        // Parapet miters seamlessly at X = 12.88 with East Wing and X = 20.5 with North Wing!
+        addBox(g, 7.62, 1.0, 0.22, MAT_OFFWHITE, { x: 16.69, y: baseY + 0.62, z: 5.62 });
+        addBox(g, 7.62, 0.06, 0.06, MAT_DARK_GREY, { x: 16.69, y: baseY + 1.24, z: 5.62, castShadow: false });
         for (const wx of [11.4, 15.0, 18.6]) {
           addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, { x: wx, y: baseY + 2.0, z: 14.02, castShadow: false });
         }
@@ -2585,7 +2602,7 @@
           addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, { x: wx, y: baseY + 2.0, z: 7.78, castShadow: false });
         }
       }
-      for (const cx of [14.9, 18.6]) {
+      for (const cx of [15.5, 18.8]) {
         addBox(g, 0.44, floorH * 2, 0.44, MAT_WHITE, { x: cx, y: bridgeFloor2Y + floorH, z: 5.74 });
       }
       for (let f = 0; f < floors; f++) {
@@ -2594,24 +2611,19 @@
       addBox(g, 0.14, 1.4, 2.2, MAT_MED_GREY, { x: 20.48, y: 0.25 + 2.0, z: 10.9, castShadow: false });
 
       // Stepped entrance visor roofs over the 1st/2nd floor driveway portal bay facing the entrance plaza (+Z)
-      // (Upper-left porch pavilion removed to clear space for the blue-rectangle Wall Fountain per Edit 4!)
       addArchMesh(g, createHippedRoofGeo(4.8, 2.2, 0.78, 1.35, 1.0), MAT_LIGHT_GREY, { x: 15.2, y: 3.65, z: 14.9 });
       addArchMesh(g, createHippedRoofGeo(4.4, 1.8, 0.68, 1.25, 0.85), MAT_LIGHT_GREY, { x: 15.2, y: 7.12, z: 14.7 });
 
-      // --- CONTINUOUS HORIZONTAL TIERED ROOF VISORS (TOPI-TOPI) AROUND INNER COURTYARD ---
-      // Split cleanly at the two inner-courtyard switchback stairwell bays so stairwells stay unobstructed!
+      // --- CONTINUOUS HORIZONTAL TIERED ROOF VISORS (TOPI-TOPI) AROUND ALL 4 SIDES OF INNER COURTYARD ---
+      // Unbroken around the entire inner ring now that all stairwells are recessed inside the classroom cores!
       const innerMinX = 13.0, innerMaxX = 29.0;
       const innerMinZ = -13.5, innerMaxZ = 5.5;
       const innerCX = 21.0, innerCZ = -4.0;
 
       for (const tierY of [3.25, 6.75]) {
-        // East inner face (Z = -9.5..+5.5, clear of Stairwell #2 at Z = -13.4..-9.6)
-        addArchMesh(g, createLeanToEaveGeo(15.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerMinX + 0.67, y: tierY, z: -2.0, ry: Math.PI / 2 });
-        // West inner face (full Z = -13.5..+5.5)
+        addArchMesh(g, createLeanToEaveGeo(19.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerMinX + 0.67, y: tierY, z: innerCZ, ry: Math.PI / 2 });
         addArchMesh(g, createLeanToEaveGeo(19.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerMaxX - 0.67, y: tierY, z: innerCZ, ry: -Math.PI / 2 });
-        // North inner face (X = 13.0..25.0, clear of Stairwell #3 at X = 25.0..28.8)
-        addArchMesh(g, createLeanToEaveGeo(12.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: 19.0, y: tierY, z: innerMaxZ - 0.67, ry: Math.PI });
-        // South inner face (full X = 13.0..29.0)
+        addArchMesh(g, createLeanToEaveGeo(16.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerCX, y: tierY, z: innerMaxZ - 0.67, ry: Math.PI });
         addArchMesh(g, createLeanToEaveGeo(16.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerCX, y: tierY, z: innerMinZ + 0.67, ry: 0 });
       }
 
