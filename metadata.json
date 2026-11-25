@@ -1,0 +1,6 @@
+{
+  "name": "SMA Negeri 66 Jakarta — 3D Architectural Maquette",
+  "description": "Interactive black-and-white 3D architectural maquette of SMA Negeri 66 Jakarta (Jl. Bango III, Pondok Labu, South Jakarta) built in Three.js r187.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,3507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMA Negeri 66 Jakarta — 3D Architectural Maquette</title>
+  <meta name="description" content="Interactive black-and-white 3D architectural maquette of SMA Negeri 66 Jakarta (Jl. Bango III, Pondok Labu, South Jakarta) built in Three.js r187." />
+  <meta property="og:title" content="SMA Negeri 66 Jakarta — 3D Architectural Maquette" />
+  <meta property="og:description" content="Interactive black-and-white 3D architectural maquette of SMA Negeri 66 Jakarta built in Three.js r187." />
+  <meta property="og:type" content="website" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --ink: #111111;
+      --ink-muted: #555555;
+      --ink-faint: #d4d4d4;
+      --paper: #ffffff;
+      --paper-panel: rgba(255, 255, 255, 0.96);
+      --paper-hover: #f2f2f2;
+      --font-sans: "Plus Jakarta Sans", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    #viewport {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #ffffff;
+    }
+
+    #viewport canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+
+    /* Minimal Architectural Title Plate (Top-Left) */
+    .title-plate {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 20;
+      background: var(--paper-panel);
+      border: 1px solid var(--ink);
+      padding: 10px 14px;
+      transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .title-plate h1 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .title-plate .subtitle {
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--ink-muted);
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .title-plate .subtitle span.sep {
+      margin: 0 5px;
+      color: #999999;
+    }
+
+    /* Top-Right Utility Actions (Edit Layout + Hide UI + Download PNG) */
+    .top-actions {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      appearance: none;
+      background: var(--paper-panel);
+      color: var(--ink);
+      border: 1px solid var(--ink);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 9px 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background-color 140ms ease, color 140ms ease;
+    }
+
+    .btn:hover {
+      background: var(--paper-hover);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    .btn.primary,
+    .btn.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .btn.primary:hover,
+    .btn.active:hover {
+      background: #2e2e2e;
+    }
+
+    /* Floating Monochrome Scene Layout Editor Panel (Right Drawer) */
+    .editor-panel {
+      position: fixed;
+      top: 62px;
+      right: 16px;
+      z-index: 25;
+      width: 264px;
+      max-height: calc(100vh - 196px);
+      overflow-y: auto;
+      background: var(--paper-panel);
+      border: 1px solid var(--ink);
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    body.editor-open .editor-panel {
+      display: flex;
+    }
+
+    .editor-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--ink-faint);
+      padding-bottom: 8px;
+    }
+
+    .editor-head h2 {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+    }
+
+    .editor-hint {
+      font-size: 10.5px;
+      color: var(--ink-muted);
+      line-height: 1.35;
+    }
+
+    .editor-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .editor-field label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .editor-select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .editor-modes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--ink);
+    }
+
+    .editor-modes button {
+      appearance: none;
+      background: var(--paper);
+      color: var(--ink);
+      border: none;
+      border-right: 1px solid var(--ink);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 4px;
+      cursor: pointer;
+    }
+
+    .editor-modes button:last-child {
+      border-right: none;
+    }
+
+    .editor-modes button.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .editor-sliders {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .editor-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding-top: 4px;
+      border-top: 1px solid var(--ink-faint);
+    }
+
+    .editor-actions .btn {
+      font-size: 11px;
+      padding: 7px 8px;
+      text-align: center;
+    }
+
+    .editor-actions .btn.full {
+      grid-column: span 2;
+    }
+
+    /* Floating Monochrome Controls Reference Panel (Top-Left below Title Plate) */
+    .controls-panel {
+      position: fixed;
+      top: 76px;
+      left: 16px;
+      z-index: 26;
+      width: 312px;
+      max-height: calc(100vh - 210px);
+      overflow-y: auto;
+      background: var(--paper-panel);
+      border: 1px solid var(--ink);
+      padding: 12px 14px;
+      display: none;
+      flex-direction: column;
+      gap: 11px;
+      transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body.controls-open .controls-panel {
+      display: flex;
+    }
+
+    .controls-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--ink-faint);
+      padding-bottom: 8px;
+    }
+
+    .controls-head h2 {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .controls-close {
+      appearance: none;
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--ink);
+      width: 22px;
+      height: 22px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .controls-close:hover {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .controls-close:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .controls-section h3 {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    .controls-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11.5px;
+      line-height: 1.3;
+      color: var(--ink);
+      padding-bottom: 4px;
+      border-bottom: 1px solid #ececec;
+    }
+
+    .controls-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .controls-desc {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .kbd-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .kbd-group kbd {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--ink);
+      background: var(--paper);
+      border: 1px solid var(--ink);
+      padding: 2px 5px;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+
+    .kbd-sep {
+      font-size: 10px;
+      color: var(--ink-muted);
+    }
+
+    /* Unified Collapsible Bottom Control Dock */
+    .control-dock {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      z-index: 20;
+      width: min(1080px, calc(100vw - 28px));
+      background: var(--paper-panel);
+      border: 1px solid var(--ink);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .dock-divider {
+      height: 1px;
+      background: var(--ink-faint);
+      width: 100%;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+
+    .segmented {
+      display: inline-flex;
+      border: 1px solid var(--ink);
+      background: var(--paper);
+    }
+
+    .segmented button {
+      appearance: none;
+      background: transparent;
+      color: var(--ink);
+      border: none;
+      border-right: 1px solid var(--ink);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 7px 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 140ms ease, color 140ms ease;
+    }
+
+    .segmented button:last-child {
+      border-right: none;
+    }
+
+    .segmented button:hover:not(.active) {
+      background: var(--paper-hover);
+    }
+
+    .segmented button.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .preset-btn {
+      appearance: none;
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--ink);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 7px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 140ms ease, color 140ms ease;
+    }
+
+    .preset-btn:hover:not(.active) {
+      background: var(--paper-hover);
+    }
+
+    .preset-btn.active {
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 600;
+    }
+
+    /* Sliders Row */
+    .sliders-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      width: 100%;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .slider-header label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .slider-value {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .slider-item.disabled {
+      opacity: 0.42;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 16px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 2px;
+      background: var(--ink);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 11px;
+      height: 11px;
+      background: var(--paper);
+      border: 2px solid var(--ink);
+      margin-top: -4.5px;
+      border-radius: 0;
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 2px;
+      background: var(--ink);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 11px;
+      height: 11px;
+      background: var(--paper);
+      border: 2px solid var(--ink);
+      border-radius: 0;
+    }
+
+    /* Hidden UI / Zen State */
+    body.ui-hidden .title-plate,
+    body.ui-hidden .control-dock,
+    body.ui-hidden .editor-panel,
+    body.ui-hidden .controls-panel,
+    body.ui-hidden #controls-btn,
+    body.ui-hidden #edit-layout-btn,
+    body.ui-hidden #download-btn {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+    }
+
+    body.ui-hidden .control-dock {
+      transform: translate(-50%, 16px);
+    }
+
+    @media (max-width: 780px) {
+      .title-plate {
+        top: 10px;
+        left: 10px;
+        padding: 8px 10px;
+      }
+      .title-plate .subtitle {
+        display: none;
+      }
+      .top-actions {
+        top: 10px;
+        right: 10px;
+        gap: 6px;
+      }
+      .controls-panel {
+        top: 52px;
+        left: 10px;
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 220px);
+      }
+      .editor-panel {
+        top: 52px;
+        right: 10px;
+        width: 230px;
+      }
+      .control-dock {
+        bottom: 10px;
+        padding: 10px 12px;
+        width: calc(100vw - 20px);
+      }
+      .sliders-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body data-projection="perspective" data-preset="isometric" data-ui="visible" data-editor="closed" data-controls="closed">
+  <div id="viewport" data-testid="maquette-viewport"></div>
+
+  <header class="title-plate" aria-label="Architectural Model Title">
+    <h1>SMA Negeri 66 Jakarta</h1>
+    <div class="subtitle">
+      <span>Jl. Bango III, Pondok Labu</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span>5,850 m² Campus</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span>Scale 1:100 Maquette</span>
+    </div>
+  </header>
+
+  <div class="top-actions" role="toolbar" aria-label="Viewport Utilities">
+    <button id="controls-btn" class="btn" type="button" aria-pressed="false" aria-controls="controls-panel" aria-expanded="false">Controls</button>
+    <button id="edit-layout-btn" class="btn" type="button" aria-pressed="false">Edit Layout</button>
+    <button id="toggle-ui-btn" class="btn" type="button" aria-pressed="false">Hide UI</button>
+    <button id="download-btn" class="btn primary" type="button">Download PNG</button>
+  </div>
+
+  <aside class="controls-panel" id="controls-panel" role="dialog" aria-label="Control List">
+    <div class="controls-head">
+      <h2>Control List</h2>
+      <button id="controls-close-btn" class="controls-close" type="button" aria-label="Close control list">×</button>
+    </div>
+
+    <div class="controls-section">
+      <h3>Camera Navigation</h3>
+      <ul class="controls-list">
+        <li class="controls-row">
+          <span class="controls-desc">Orbit around campus</span>
+          <span class="kbd-group"><kbd>Left Drag</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Pan viewport</span>
+          <span class="kbd-group"><kbd>Right Drag</kbd><span class="kbd-sep">/</span><kbd>Shift+Drag</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Zoom in / out</span>
+          <span class="kbd-group"><kbd>Scroll</kbd><span class="kbd-sep">/</span><kbd>Pinch</kbd></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="controls-section">
+      <h3>Keyboard Shortcuts</h3>
+      <ul class="controls-list">
+        <li class="controls-row">
+          <span class="controls-desc">Hide / Show UI</span>
+          <span class="kbd-group"><kbd>H</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Toggle Control List</span>
+          <span class="kbd-group"><kbd>?</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Close Control List</span>
+          <span class="kbd-group"><kbd>Esc</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Move gizmo (Edit Layout)</span>
+          <span class="kbd-group"><kbd>T</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Rotate gizmo (Edit Layout)</span>
+          <span class="kbd-group"><kbd>R</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Scale gizmo (Edit Layout)</span>
+          <span class="kbd-group"><kbd>S</kbd></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="controls-section">
+      <h3>Toolbar &amp; Camera Dock</h3>
+      <ul class="controls-list">
+        <li class="controls-row">
+          <span class="controls-desc">Switch camera presets</span>
+          <span class="kbd-group"><kbd>Views</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">3D / Orthographic mode</span>
+          <span class="kbd-group"><kbd>Projection</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">FOV, Azimuth &amp; Elevation</span>
+          <span class="kbd-group"><kbd>Sliders</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Select &amp; move structures</span>
+          <span class="kbd-group"><kbd>Edit Layout</kbd></span>
+        </li>
+        <li class="controls-row">
+          <span class="controls-desc">Export hi-res snapshot</span>
+          <span class="kbd-group"><kbd>Download PNG</kbd></span>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <aside class="editor-panel" id="editor-panel" aria-label="Scene Layout Editor">
+    <div class="editor-head">
+      <h2>Layout Editor</h2>
+      <span class="slider-value">1u = 1m</span>
+    </div>
+    <p class="editor-hint">Click any campus structure or pick below to adjust its 3D gizmo or coordinates.</p>
+
+    <div class="editor-field">
+      <label for="editor-select">Selected Element</label>
+      <select id="editor-select" class="editor-select"></select>
+    </div>
+
+    <div class="editor-field">
+      <label>Gizmo Mode</label>
+      <div class="editor-modes" role="group" aria-label="Transform Mode">
+        <button type="button" data-mode="translate" class="active">Move</button>
+        <button type="button" data-mode="rotate">Rotate</button>
+        <button type="button" data-mode="scale">Scale</button>
+      </div>
+    </div>
+
+    <div class="editor-sliders">
+      <div class="slider-item">
+        <div class="slider-header">
+          <label for="ed-x">Offset X</label>
+          <span class="slider-value" id="ed-x-val">0.0 m</span>
+        </div>
+        <input id="ed-x" type="range" min="-25" max="25" step="0.2" value="0" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-header">
+          <label for="ed-y">Offset Y</label>
+          <span class="slider-value" id="ed-y-val">0.0 m</span>
+        </div>
+        <input id="ed-y" type="range" min="-5" max="10" step="0.1" value="0" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-header">
+          <label for="ed-z">Offset Z</label>
+          <span class="slider-value" id="ed-z-val">0.0 m</span>
+        </div>
+        <input id="ed-z" type="range" min="-25" max="25" step="0.2" value="0" />
+      </div>
+      <div class="slider-item">
+        <div class="slider-header">
+          <label for="ed-ry">Rotation Y</label>
+          <span class="slider-value" id="ed-ry-val">0°</span>
+        </div>
+        <input id="ed-ry" type="range" min="-180" max="180" step="1" value="0" />
+      </div>
+    </div>
+
+    <div class="editor-actions">
+      <button type="button" id="ed-reset-one" class="btn">Reset Selected</button>
+      <button type="button" id="ed-reset-all" class="btn">Reset All</button>
+      <button type="button" id="ed-export-json" class="btn primary full">Export Layout JSON</button>
+    </div>
+  </aside>
+
+  <section class="control-dock" aria-label="Camera Controls">
+    <div class="dock-row">
+      <div class="control-group" role="group" aria-label="Camera Presets">
+        <span class="group-label">Views</span>
+        <button type="button" class="preset-btn active" data-preset="isometric">Isometric Overview</button>
+        <button type="button" class="preset-btn" data-preset="entrance">Jl. Bango III Entrance Corner</button>
+        <button type="button" class="preset-btn" data-preset="courtyard">Main Courtyard &amp; Walkway</button>
+        <button type="button" class="preset-btn" data-preset="plan">Top-Down Plan View</button>
+      </div>
+
+      <div class="control-group" role="group" aria-label="Camera Projection">
+        <span class="group-label">Projection</span>
+        <div class="segmented">
+          <button type="button" id="proj-perspective" class="active" aria-pressed="true">Perspective (3D)</button>
+          <button type="button" id="proj-orthographic" aria-pressed="false">Orthographic</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dock-divider" aria-hidden="true"></div>
+
+    <div class="sliders-grid">
+      <div class="slider-item" id="fov-wrapper">
+        <div class="slider-header">
+          <label for="slider-fov">Field of View (FOV)</label>
+          <span class="slider-value" id="val-fov">42°</span>
+        </div>
+        <input id="slider-fov" type="range" min="20" max="90" step="1" value="42" />
+      </div>
+
+      <div class="slider-item">
+        <div class="slider-header">
+          <label for="slider-azimuth">Azimuth Angle</label>
+          <span class="slider-value" id="val-azimuth">332°</span>
+        </div>
+        <input id="slider-azimuth" type="range" min="0" max="360" step="1" value="332" />
+      </div>
+
+      <div class="slider-item">
+        <div class="slider-header">
+          <label for="slider-elevation">Elevation Angle</label>
+          <span class="slider-value" id="val-elevation">36°</span>
+        </div>
+        <input id="slider-elevation" type="range" min="5" max="90" step="1" value="36" />
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+    // =========================================================================
+    // 1. RENDERER & SOFTWARE-WEBGL DETECTION
+    // =========================================================================
+    const isSoftwareGl = (() => {
+      try {
+        const probe = document.createElement('canvas');
+        const gl = probe.getContext('webgl2') || probe.getContext('webgl');
+        if (!gl) return true;
+        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+        const name = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : '';
+        return /SwiftShader|Software|llvmpipe|Mesa/i.test(name);
+      } catch {
+        return false;
+      }
+    })();
+
+    const viewport = document.getElementById('viewport');
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      preserveDrawingBuffer: true,
+      powerPreference: 'high-performance',
+    });
+    renderer.setPixelRatio(isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xffffff, 1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.toneMapping = THREE.NoToneMapping;
+    viewport.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+
+    // =========================================================================
+    // 2. MONOCHROME ARCHITECTURAL MAQUETTE MATERIALS & INK EDGE HELPERS
+    // =========================================================================
+    const makeMat = (hex) =>
+      new THREE.MeshLambertMaterial({
+        color: hex,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      });
+
+    const MAT_WHITE = makeMat(0xffffff);
+    const MAT_OFFWHITE = makeMat(0xf4f4f4);
+    const MAT_LIGHT_GREY = makeMat(0xdfdfdf);
+    const MAT_MED_GREY = makeMat(0xbdbdbd);
+    const MAT_DARK_GREY = makeMat(0x6e6e6e);
+    const MAT_GATE_BLACK = makeMat(0x282828);
+
+    const LINE_INK = new THREE.LineBasicMaterial({ color: 0x111111 });
+    const LINE_SUBTLE = new THREE.LineBasicMaterial({
+      color: 0x222222,
+      transparent: true,
+      opacity: 0.48,
+    });
+    const LINE_COURT = new THREE.LineBasicMaterial({ color: 0x111111 });
+
+    /**
+     * Wraps any structural BufferGeometry in a matte architectural mesh + crisp #111111 EdgesGeometry outline.
+     */
+    function addArchMesh(parent, geometry, material, {
+      x = 0, y = 0, z = 0,
+      rx = 0, ry = 0, rz = 0,
+      castShadow = true,
+      receiveShadow = true,
+      edgeAngle = 15,
+      lineMat = LINE_INK,
+      withEdges = true,
+    } = {}) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(rx, ry, rz);
+      mesh.castShadow = castShadow;
+      mesh.receiveShadow = receiveShadow;
+      if (withEdges) {
+        const edges = new THREE.EdgesGeometry(geometry, edgeAngle);
+        const outline = new THREE.LineSegments(edges, lineMat);
+        mesh.add(outline);
+      }
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function addBox(parent, w, h, d, material, opts = {}) {
+      return addArchMesh(parent, new THREE.BoxGeometry(w, h, d), material, opts);
+    }
+
+    /**
+     * Builds a crisp hipped roof (atap limasan) prism centered on XZ, base at y=0, ridge at y=h.
+     */
+    function createHippedRoofGeo(w, d, h, ridgeInsetX, ridgeInsetZ) {
+      const hw = w / 2;
+      const hd = d / 2;
+      const rx = Math.max(0.05, hw - ridgeInsetX);
+      const rz = Math.max(0.05, hd - ridgeInsetZ);
+
+      const b0 = [-hw, 0,  hd];
+      const b1 = [ hw, 0,  hd];
+      const b2 = [ hw, 0, -hd];
+      const b3 = [-hw, 0, -hd];
+
+      const t0 = [-rx, h,  rz];
+      const t1 = [ rx, h,  rz];
+      const t2 = [ rx, h, -rz];
+      const t3 = [-rx, h, -rz];
+
+      const positions = [];
+      const pushTri = (a, b, c) => positions.push(...a, ...b, ...c);
+      const pushQuad = (a, b, c, dPt) => {
+        pushTri(a, b, c);
+        pushTri(a, c, dPt);
+      };
+
+      pushQuad(b0, b1, t1, t0);
+      pushQuad(b1, b2, t2, t1);
+      pushQuad(b2, b3, t3, t2);
+      pushQuad(b3, b0, t0, t3);
+      pushQuad(t0, t1, t2, t3);
+      pushQuad(b3, b2, b1, b0);
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    /**
+     * Builds a clean symmetric triangular gable roof prism centered on XZ, base at y=0, ridge at y=h.
+     */
+    function createGableRoofGeo(w, d, h, ridgeAxis = 'z') {
+      const hw = w / 2;
+      const hd = d / 2;
+      const positions = [];
+      const pushTri = (a, b, c) => positions.push(...a, ...b, ...c);
+      const pushQuad = (a, b, c, dPt) => {
+        pushTri(a, b, c);
+        pushTri(a, c, dPt);
+      };
+
+      if (ridgeAxis === 'z') {
+        const fl = [-hw, 0,  hd], fr = [ hw, 0,  hd];
+        const bl = [-hw, 0, -hd], br = [ hw, 0, -hd];
+        const ft = [  0, h,  hd], bt = [  0, h, -hd];
+        pushQuad(bl, fl, ft, bt);
+        pushQuad(fr, br, bt, ft);
+        pushTri(fl, fr, ft);
+        pushTri(br, bl, bt);
+        pushQuad(bl, br, fr, fl);
+      } else {
+        const fl = [-hw, 0,  hd], fr = [ hw, 0,  hd];
+        const bl = [-hw, 0, -hd], br = [ hw, 0, -hd];
+        const lt = [-hw, h,   0], rt = [ hw, h,   0];
+        pushQuad(fl, fr, rt, lt);
+        pushQuad(br, bl, lt, rt);
+        pushTri(bl, fl, lt);
+        pushTri(fr, br, rt);
+        pushQuad(bl, br, fr, fl);
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    /**
+     * Builds a sloped lean-to eaves canopy wedge (back edge high along -Z, front drip edge low at +Z).
+     */
+    function createLeanToEaveGeo(length, depth, height, thickness = 0.14) {
+      const hl = length / 2;
+      const hd = depth / 2;
+      const positions = [];
+      const pushTri = (a, b, c) => positions.push(...a, ...b, ...c);
+      const pushQuad = (a, b, c, dPt) => {
+        pushTri(a, b, c);
+        pushTri(a, c, dPt);
+      };
+
+      const blT = [-hl, height, -hd], brT = [hl, height, -hd];
+      const flT = [-hl, 0, hd],       frT = [hl, 0, hd];
+      const blB = [-hl, height - thickness, -hd], brB = [hl, height - thickness, -hd];
+      const flB = [-hl, -thickness, hd],          frB = [hl, -thickness, hd];
+
+      pushQuad(blT, flT, frT, brT);
+      pushQuad(brB, frB, flB, blB);
+      pushQuad(flT, flB, frB, frT);
+      pushQuad(brT, brB, blB, blT);
+      pushQuad(blT, blB, flB, flT);
+      pushQuad(frT, frB, brB, brT);
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    // =========================================================================
+    // 3. PROCEDURAL 3D ARCHITECTURAL BLOCK LETTERING
+    // =========================================================================
+    const GLYPHS = {
+      'S': [[0.08,0.92,0.92,0.92],[0.08,0.52,0.92,0.52],[0.08,0.08,0.92,0.08],[0.08,0.92,0.08,0.52],[0.92,0.52,0.92,0.08]],
+      'M': [[0.08,0.08,0.08,0.92],[0.92,0.08,0.92,0.92],[0.08,0.92,0.50,0.42],[0.92,0.92,0.50,0.42]],
+      'A': [[0.08,0.08,0.50,0.92],[0.92,0.08,0.50,0.92],[0.24,0.40,0.76,0.40]],
+      'N': [[0.10,0.08,0.10,0.92],[0.90,0.08,0.90,0.92],[0.10,0.92,0.90,0.08]],
+      'E': [[0.12,0.08,0.12,0.92],[0.12,0.92,0.90,0.92],[0.12,0.52,0.78,0.52],[0.12,0.08,0.90,0.08]],
+      'G': [[0.90,0.92,0.12,0.92],[0.12,0.92,0.12,0.08],[0.12,0.08,0.90,0.08],[0.90,0.08,0.90,0.50],[0.52,0.50,0.90,0.50]],
+      'R': [[0.12,0.08,0.12,0.92],[0.12,0.92,0.86,0.92],[0.86,0.92,0.86,0.52],[0.12,0.52,0.86,0.52],[0.46,0.52,0.90,0.08]],
+      'I': [[0.50,0.08,0.50,0.92],[0.24,0.92,0.76,0.92],[0.24,0.08,0.76,0.08]],
+      '6': [[0.90,0.92,0.12,0.92],[0.12,0.92,0.12,0.08],[0.12,0.08,0.90,0.08],[0.90,0.08,0.90,0.52],[0.12,0.52,0.90,0.52]],
+      'J': [[0.20,0.92,0.88,0.92],[0.78,0.92,0.78,0.10],[0.78,0.10,0.18,0.10],[0.18,0.10,0.18,0.34]],
+      'K': [[0.12,0.08,0.12,0.92],[0.12,0.48,0.88,0.92],[0.32,0.56,0.90,0.08]],
+      'T': [[0.06,0.92,0.94,0.92],[0.50,0.08,0.50,0.92]],
+      ' ': [],
+    };
+
+    function create3DTextGroup(text, { height = 0.58, depth = 0.12, stroke = 0.11, spacing = 0.14, mat = MAT_GATE_BLACK } = {}) {
+      const group = new THREE.Group();
+      const charW = height * 0.68;
+      const chars = text.toUpperCase().split('');
+      let totalW = 0;
+      chars.forEach((ch, idx) => {
+        totalW += ch === ' ' ? charW * 0.55 : (ch === 'I' ? charW * 0.55 : charW);
+        if (idx < chars.length - 1) totalW += spacing;
+      });
+      let cursorX = -totalW / 2;
+      for (const ch of chars) {
+        const w = ch === ' ' ? charW * 0.55 : (ch === 'I' ? charW * 0.55 : charW);
+        const segs = GLYPHS[ch] || [];
+        for (const [x0, y0, x1, y1] of segs) {
+          const ax = cursorX + x0 * w;
+          const ay = (y0 - 0.5) * height;
+          const bx = cursorX + x1 * w;
+          const by = (y1 - 0.5) * height;
+          const dx = bx - ax;
+          const dy = by - ay;
+          const len = Math.hypot(dx, dy) + stroke * 0.65;
+          const angle = Math.atan2(dy, dx);
+          addArchMesh(group, new THREE.BoxGeometry(len, stroke, depth), mat, {
+            x: (ax + bx) / 2,
+            y: (ay + by) / 2,
+            z: depth / 2,
+            rz: angle,
+            castShadow: true,
+            receiveShadow: true,
+            edgeAngle: 25,
+          });
+        }
+        cursorX += w + spacing;
+      }
+      return group;
+    }
+
+    // =========================================================================
+    // 4. LIGHTING RIG (SOFT AMBIENT + ARCHITECTURAL SUN SHADOWS)
+    // =========================================================================
+    scene.add(new THREE.AmbientLight(0xffffff, 0.96));
+
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xefefef, 0.48);
+    hemiLight.position.set(0, 60, 0);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.15);
+    sunLight.position.set(54, 78, 52);
+    sunLight.castShadow = true;
+    const shadowSize = isSoftwareGl ? 1024 : 2048;
+    sunLight.shadow.mapSize.set(shadowSize, shadowSize);
+    sunLight.shadow.camera.near = 15;
+    sunLight.shadow.camera.far = 220;
+    sunLight.shadow.camera.left = -64;
+    sunLight.shadow.camera.right = 64;
+    sunLight.shadow.camera.top = 64;
+    sunLight.shadow.camera.bottom = -64;
+    sunLight.shadow.bias = -0.0004;
+    sunLight.shadow.normalBias = 0.03;
+    scene.add(sunLight);
+
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.30);
+    fillLight.position.set(-48, 36, -42);
+    scene.add(fillLight);
+
+    // =========================================================================
+    // 5. CAMPUS GEOMETRY (1 UNIT = 1 METER, ~5,850 m² PARCEL)
+    //   +Z = North / Front (Jl. Bango III)
+    //   -Z = South / Rear (Rear Garden, Gedung A Conjoined 2nd-Floor Mosque)
+    //   -X = East / Front-Left (Gedung B Gable L-Wing, Yard Shed, Front Black Gate & White L-Canopy)
+    //   +X = West / Right (Sign Wall -> Direct 90° Second Gate -> Open Skybridge -> Gedung A)
+    // =========================================================================
+    const campus = new THREE.Group();
+    scene.add(campus);
+
+    // Registry of editable architectural groups for TransformControls Scene Editor
+    const editableEntries = [];
+    function registerEditable(id, label, group) {
+      group.userData.editableId = id;
+      group.userData.editableLabel = label;
+      editableEntries.push({
+        id,
+        label,
+        group,
+        initialPos: group.position.clone(),
+        initialRot: group.rotation.clone(),
+        initialScale: group.scale.clone(),
+      });
+      return group;
+    }
+
+    // -------------------------------------------------------------------------
+    // 5A. SITE PLINTH, JL. BANGO III L-CORNER ROAD & LOW PERIMETER CURBS
+    // -------------------------------------------------------------------------
+    function buildSiteAndRoad() {
+      const siteGroup = new THREE.Group();
+
+      // Seamless white ground plane catching subtle grey shadows
+      const shadowGround = new THREE.Mesh(
+        new THREE.PlaneGeometry(520, 520),
+        new THREE.ShadowMaterial({ opacity: 0.13 })
+      );
+      shadowGround.rotation.x = -Math.PI / 2;
+      shadowGround.position.y = -0.84;
+      shadowGround.receiveShadow = true;
+      siteGroup.add(shadowGround);
+
+      // Architectural presentation base plinth (96m x 85m, X: -47..+49, Z: -41..+44)
+      addBox(siteGroup, 96, 0.84, 85.0, MAT_WHITE, {
+        x: 1.0, y: -0.42, z: 1.5,
+        castShadow: false, receiveShadow: true,
+      });
+
+      // Campus parcel ground pad (trimmed cleanly to match shortened rear wall at Z = -35.2)
+      addBox(siteGroup, 79.0, 0.06, 67.5, MAT_OFFWHITE, {
+        x: 1.0, y: -0.02, z: -2.25,
+        castShadow: false, receiveShadow: true,
+        lineMat: LINE_SUBTLE,
+      });
+
+      // --- JL. BANGO III ROAD SURFACE (CLEAN 90° L-CORNER, ZERO CONTINUATION PAST CORNER) ---
+      // Front leg runs horizontally along Z = 25.8..32.8 from X = -47.0 to X = -0.8 (where Second Gate stands at 90°),
+      // then turns cleanly 90° downward along X = -7.8..-0.8 from Z = 32.8 to Z = 44.0.
+      const roadShape = new THREE.Shape();
+      const roadPolyXZ = [
+        [-47.0, 32.8], // Outer road edge far-left
+        [-7.8,  32.8], // Clean 90° outer street corner
+        [-7.8,  44.0], // Outer edge turning cleanly downward to plinth front
+        [-0.8,  44.0], // Inner bottom-right road edge (low curb + trees, NO tall concrete wall!)
+        [-0.8,  32.0], // Right pillar of Second Gate
+        [-0.8,  25.8], // Direct 90° inward corner meeting right end of Sign Wall
+        [-47.0, 25.8], // Front straight segment past Sign Wall, Front Gate & Front Fence
+      ];
+      roadShape.moveTo(roadPolyXZ[0][0], -roadPolyXZ[0][1]);
+      for (let i = 1; i < roadPolyXZ.length; i++) {
+        roadShape.lineTo(roadPolyXZ[i][0], -roadPolyXZ[i][1]);
+      }
+      roadShape.closePath();
+
+      const roadGeo = new THREE.ExtrudeGeometry(roadShape, { depth: 0.05, bevelEnabled: false });
+      roadGeo.rotateX(-Math.PI / 2);
+      addArchMesh(siteGroup, roadGeo, MAT_LIGHT_GREY, {
+        x: 0, y: 0.002, z: 0,
+        castShadow: false, receiveShadow: true, edgeAngle: 25,
+      });
+
+      // Single extruded L-shaped outer sidewalk flush with the clean 90° outer road corner (-7.8, 32.8)
+      const outerSwShape = new THREE.Shape();
+      const outerSwPolyXZ = [
+        [-47.0, 32.8],
+        [-7.8,  32.8],
+        [-7.8,  44.0],
+        [-9.2,  44.0],
+        [-9.2,  34.2],
+        [-47.0, 34.2],
+      ];
+      outerSwShape.moveTo(outerSwPolyXZ[0][0], -outerSwPolyXZ[0][1]);
+      for (let i = 1; i < outerSwPolyXZ.length; i++) {
+        outerSwShape.lineTo(outerSwPolyXZ[i][0], -outerSwPolyXZ[i][1]);
+      }
+      outerSwShape.closePath();
+      const outerSwGeo = new THREE.ExtrudeGeometry(outerSwShape, { depth: 0.14, bevelEnabled: false });
+      outerSwGeo.rotateX(-Math.PI / 2);
+      addArchMesh(siteGroup, outerSwGeo, MAT_WHITE, {
+        x: 0, y: 0.0, z: 0,
+        castShadow: false, receiveShadow: true, edgeAngle: 25,
+      });
+
+      // Road lane dashed centerlines (smooth 90° L-turn into downward Jl. Bango III leg at X = -4.3)
+      const dashPts = [];
+      for (let x = -45.0; x <= -8.0; x += 4.2) {
+        dashPts.push(new THREE.Vector3(x, 0.065, 29.3), new THREE.Vector3(Math.min(x + 2.2, -6.2), 0.065, 29.3));
+      }
+      const turnPts = [
+        [-6.0, 29.3], [-4.9, 29.7], [-4.4, 30.6], [-4.3, 31.8],
+      ];
+      for (let i = 0; i < turnPts.length - 1; i++) {
+        dashPts.push(
+          new THREE.Vector3(turnPts[i][0], 0.065, turnPts[i][1]),
+          new THREE.Vector3(turnPts[i + 1][0], 0.065, turnPts[i + 1][1])
+        );
+      }
+      for (let z = 33.2; z <= 42.2; z += 4.0) {
+        dashPts.push(new THREE.Vector3(-4.3, 0.065, z), new THREE.Vector3(-4.3, 0.065, Math.min(z + 2.1, 43.6)));
+      }
+      siteGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(dashPts), LINE_SUBTLE));
+
+      // Front-left sidewalk strip along far-left fence
+      addBox(siteGroup, 19.2, 0.14, 1.0, MAT_WHITE, {
+        x: -28.8, y: 0.07, z: 26.3,
+        castShadow: false, receiveShadow: true,
+      });
+
+      // Alternating black-and-white striped curbs:
+      // 1) Base of Sign Wall (X = -13.1 to -1.1, Z = 26.35)
+      // 2) Low street curb along bottom-right road edge (X = -0.65, Z = 32.3 to 43.8 — NO tall concrete wall!)
+      const curbRuns = [
+        { x: -13.0, z: 26.36, dx: 0.92, dz: 0, count: 14 },
+        { x: -0.66, z: 32.4,  dx: 0, dz: 0.92, count: 13 },
+      ];
+      for (const seg of curbRuns) {
+        for (let i = 0; i < seg.count; i++) {
+          const isDark = i % 2 === 0;
+          addBox(siteGroup, seg.dx ? 0.88 : 0.30, 0.22, seg.dz ? 0.88 : 0.30, isDark ? MAT_GATE_BLACK : MAT_WHITE, {
+            x: seg.x + seg.dx * i,
+            y: 0.11,
+            z: seg.z + seg.dz * i,
+            castShadow: false,
+            receiveShadow: true,
+          });
+        }
+      }
+
+      // Outer site perimeter boundary walls (East, West & shortened Rear South wall at Z = -35.2, ~3.5m behind Gedung A tail)
+      addBox(siteGroup, 0.35, 2.3, 61.0, MAT_OFFWHITE, { x: -38.3, y: 1.15, z: -4.7 });
+      addBox(siteGroup, 0.35, 2.3, 63.2, MAT_OFFWHITE, { x: 40.3, y: 1.15, z: -3.6 });
+      addBox(siteGroup, 79.0, 2.3, 0.35, MAT_OFFWHITE, { x: 1.0, y: 1.15, z: -35.2 });
+      // Clean perimeter wall hugging front of Extended Front-Right Wing (Z=28.0) & short plaza return to road curb
+      addBox(siteGroup, 19.7, 2.1, 0.35, MAT_OFFWHITE, { x: 30.45, y: 1.05, z: 28.0 });
+      addBox(siteGroup, 0.35, 1.4, 7.2, MAT_OFFWHITE, { x: 20.6, y: 0.7, z: 28.0 });
+      addBox(siteGroup, 21.4, 0.65, 0.32, MAT_OFFWHITE, { x: 9.9, y: 0.325, z: 31.6 });
+
+      // Etched architectural North Arrow on clear bottom-right plinth corner
+      const northGroup = new THREE.Group();
+      northGroup.position.set(43.8, 0.03, 38.8);
+      const nPts = [
+        new THREE.Vector3(0, 0, -2.4), new THREE.Vector3(0, 0, 2.7),
+        new THREE.Vector3(0, 0, 2.7), new THREE.Vector3(-0.82, 0, 1.25),
+        new THREE.Vector3(0, 0, 2.7), new THREE.Vector3(0.82, 0, 1.25),
+        new THREE.Vector3(-0.82, 0, 1.25), new THREE.Vector3(0.82, 0, 1.25),
+      ];
+      northGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(nPts), LINE_INK));
+      const circlePts = [];
+      for (let i = 0; i < 32; i++) {
+        const a0 = (i / 32) * Math.PI * 2;
+        const a1 = ((i + 1) / 32) * Math.PI * 2;
+        circlePts.push(
+          new THREE.Vector3(Math.cos(a0) * 1.85, 0, Math.sin(a0) * 1.85),
+          new THREE.Vector3(Math.cos(a1) * 1.85, 0, Math.sin(a1) * 1.85)
+        );
+      }
+      northGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(circlePts), LINE_SUBTLE));
+      siteGroup.add(northGroup);
+
+      campus.add(siteGroup);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5B. FRONT BLACK GATE, WHITE L-SHAPED WALKWAY CANOPY & FRONT-LEFT YARD SHED
+    // -------------------------------------------------------------------------
+    function buildFrontGateAndCanopy() {
+      const gateCanopyGroup = registerEditable('front-gate-canopy', 'Front Gate & L-Canopy', new THREE.Group());
+
+      // Far-left front perimeter fence (X: -38.3 to -19.2, Z: 25.8) with rhythmic vertical-slat piers
+      addBox(gateCanopyGroup, 19.1, 0.85, 0.34, MAT_OFFWHITE, { x: -28.75, y: 0.425, z: 25.8 });
+      for (const pierX of [-36.2, -31.0, -25.8, -20.6]) {
+        addBox(gateCanopyGroup, 2.4, 2.35, 0.40, MAT_MED_GREY, { x: pierX, y: 1.175, z: 25.8 });
+        for (let i = -2; i <= 2; i++) {
+          addBox(gateCanopyGroup, 0.08, 2.25, 0.06, MAT_WHITE, { x: pierX + i * 0.42, y: 1.175, z: 26.02, castShadow: false });
+        }
+      }
+      // Iron paling segments between piers
+      addBox(gateCanopyGroup, 19.0, 0.08, 0.08, MAT_GATE_BLACK, { x: -28.8, y: 2.15, z: 25.8 });
+      for (let x = -37.8; x <= -19.5; x += 0.42) {
+        addBox(gateCanopyGroup, 0.045, 1.28, 0.045, MAT_GATE_BLACK, { x, y: 1.50, z: 25.8, castShadow: false });
+      }
+      // Framed white notice boards mounted cleanly on front face of front-left fence
+      for (const bx of [-31.8, -27.2, -22.8]) {
+        addBox(gateCanopyGroup, 3.6, 1.12, 0.12, MAT_WHITE, { x: bx, y: 2.82, z: 25.88 });
+      }
+
+      // FRONT BLACK SLIDING VERTICAL-BAR GATE (aligned straight with basketball court left edge: X = -19.2..-13.4)
+      const gateY = 1.15;
+      addBox(gateCanopyGroup, 5.8, 0.12, 0.12, MAT_GATE_BLACK, { x: -16.3, y: 2.25, z: 25.8 });
+      addBox(gateCanopyGroup, 5.8, 0.14, 0.12, MAT_GATE_BLACK, { x: -16.3, y: 0.18, z: 25.8 });
+      addBox(gateCanopyGroup, 5.8, 0.08, 0.10, MAT_GATE_BLACK, { x: -16.3, y: 1.22, z: 25.8 });
+      addBox(gateCanopyGroup, 0.14, 2.15, 0.14, MAT_GATE_BLACK, { x: -19.15, y: gateY, z: 25.8 });
+      addBox(gateCanopyGroup, 0.14, 2.15, 0.14, MAT_GATE_BLACK, { x: -13.45, y: gateY, z: 25.8 });
+      for (let x = -18.85; x <= -13.75; x += 0.28) {
+        addBox(gateCanopyGroup, 0.05, 2.08, 0.05, MAT_GATE_BLACK, { x, y: gateY, z: 25.8, castShadow: true });
+      }
+      // Sliding rail track
+      addBox(gateCanopyGroup, 10.2, 0.04, 0.16, MAT_MED_GREY, { x: -17.5, y: 0.02, z: 25.8, castShadow: false });
+
+      // --- NARROW FLAT-ROOFED L-SHAPED MATTE WHITE WALKWAY CANOPY (NO PITCH-BLACK BLOB!) ---
+      // Straight leg: runs from front black gate (Z=26.3) straight along the basketball court edge to Z=10.6 (X=-19.0..-14.2)
+      // 90° Left return leg: turns left (-X) directly into the ground floor of Gedung B (X=-24.6..-19.0, Z=10.6..14.8)
+      const canopyY = 3.55;
+      const lCanopyShape = new THREE.Shape();
+      const lCanopyPolyXZ = [
+        [-19.0, 26.3],
+        [-14.2, 26.3],
+        [-14.2, 10.6],
+        [-24.6, 10.6],
+        [-24.6, 14.8],
+        [-19.0, 14.8],
+      ];
+      lCanopyShape.moveTo(lCanopyPolyXZ[0][0], -lCanopyPolyXZ[0][1]);
+      for (let i = 1; i < lCanopyPolyXZ.length; i++) {
+        lCanopyShape.lineTo(lCanopyPolyXZ[i][0], -lCanopyPolyXZ[i][1]);
+      }
+      lCanopyShape.closePath();
+      const lCanopyGeo = new THREE.ExtrudeGeometry(lCanopyShape, { depth: 0.26, bevelEnabled: false });
+      lCanopyGeo.rotateX(-Math.PI / 2);
+      addArchMesh(gateCanopyGroup, lCanopyGeo, MAT_WHITE, {
+        x: 0, y: canopyY, z: 0,
+        castShadow: true, receiveShadow: true, edgeAngle: 20,
+      });
+
+      // Subtle architectural roof panel seam lines across the crisp white L-canopy
+      const seamPts = [];
+      for (let z = 12.6; z <= 25.4; z += 1.6) {
+        seamPts.push(new THREE.Vector3(-18.95, canopyY + 0.27, z), new THREE.Vector3(-14.25, canopyY + 0.27, z));
+      }
+      for (let x = -23.6; x <= -19.6; x += 1.6) {
+        seamPts.push(new THREE.Vector3(x, canopyY + 0.27, 10.65), new THREE.Vector3(x, canopyY + 0.27, 14.75));
+      }
+      gateCanopyGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(seamPts), LINE_SUBTLE));
+
+      // Slender crisp white columns with light-grey plinth bases supporting the L-canopy
+      const canopyCols = [
+        [-18.6, 25.0], [-14.6, 25.0],
+        [-18.6, 20.2], [-14.6, 20.2],
+        [-18.6, 15.2], [-14.6, 15.2],
+        [-18.6, 11.1], [-14.6, 11.1],
+        [-23.8, 11.1], [-23.8, 14.3],
+      ];
+      for (const [cx, cz] of canopyCols) {
+        addBox(gateCanopyGroup, 0.44, 0.85, 0.44, MAT_LIGHT_GREY, { x: cx, y: 0.425, z: cz });
+        addBox(gateCanopyGroup, 0.30, 2.72, 0.30, MAT_WHITE, { x: cx, y: 2.20, z: cz });
+      }
+
+      campus.add(gateCanopyGroup);
+
+      // --- FRONT-LEFT YARD CORRUGATED LEAN-TO SHED ROOF & STRIPED COURTYARD ---
+      const yardShedGroup = registerEditable('front-left-shed', 'Front-Left Yard Shed', new THREE.Group());
+
+      // Striped front-left courtyard paving slab between front fence (Z=25.8) and Gedung B north gable (Z=13.5)
+      addBox(yardShedGroup, 18.6, 0.04, 12.1, MAT_WHITE, {
+        x: -28.7, y: 0.02, z: 19.65,
+        castShadow: false, receiveShadow: true,
+      });
+      // Architectural monochrome stripe markings across the front-left courtyard (matches aerial photo!)
+      const stripePts = [];
+      for (let x = -37.2; x <= -20.2; x += 0.95) {
+        stripePts.push(new THREE.Vector3(x, 0.052, 14.0), new THREE.Vector3(x, 0.052, 20.6));
+      }
+      yardShedGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(stripePts), LINE_SUBTLE));
+
+      // Lower corrugated lean-to shed roof over front-left yard (X: -37.8..-19.8, Z: 20.6..25.0)
+      // Slopes cleanly downward toward the front fence (+Z) with crisp clearance behind notice boards
+      const shedW = 18.0;
+      const shedD = 4.4;
+      const shedGeo = createLeanToEaveGeo(shedW, shedD, 0.72, 0.14);
+      addArchMesh(yardShedGroup, shedGeo, MAT_OFFWHITE, {
+        x: -28.8, y: 2.55, z: 22.8,
+        castShadow: true, receiveShadow: true, edgeAngle: 18,
+      });
+      // Crisp parallel corrugated roof rib lines running down the lean-to slope
+      const corrPts = [];
+      for (let x = -37.5; x <= -20.1; x += 0.60) {
+        corrPts.push(
+          new THREE.Vector3(x, 2.55 + 0.73, 20.62),
+          new THREE.Vector3(x, 2.55 + 0.01, 24.98)
+        );
+      }
+      yardShedGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(corrPts), LINE_SUBTLE));
+      // Slender white structural posts & rear purlin beam supporting the lean-to shed
+      addBox(yardShedGroup, shedW, 0.18, 0.18, MAT_LIGHT_GREY, { x: -28.8, y: 3.08, z: 20.75 });
+      for (let x = -37.4; x <= -20.2; x += 3.44) {
+        addBox(yardShedGroup, 0.22, 3.05, 0.22, MAT_WHITE, { x, y: 1.525, z: 20.75 });
+        addBox(yardShedGroup, 0.20, 2.45, 0.20, MAT_WHITE, { x, y: 1.225, z: 24.85 });
+      }
+
+      campus.add(yardShedGroup);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5C. PERIMETER SIGN WALL ("SMA NEGERI 66 JAKARTA" — ZERO PHANTOM FENCES!)
+    // -------------------------------------------------------------------------
+    function buildSignWall() {
+      const g = registerEditable('sign-wall', 'Sign Wall (SMA Negeri 66)', new THREE.Group());
+
+      // Runs directly from right edge of Front Black Gate (X=-13.4) to X=-0.8 (direct 90° join to Second Gate!)
+      const wallW = 12.6;
+      const wallH = 2.85;
+      const wallCX = -7.1;
+      const wallZ = 25.8;
+
+      addBox(g, wallW, wallH, 0.45, MAT_MED_GREY, { x: wallCX, y: wallH / 2, z: wallZ });
+      addBox(g, wallW + 0.16, 0.12, 0.58, MAT_WHITE, { x: wallCX, y: wallH + 0.06, z: wallZ });
+
+      // Architectural vertical slat ribs along front face
+      for (let x = -13.15; x <= -1.05; x += 0.52) {
+        addBox(g, 0.10, wallH - 0.1, 0.06, MAT_LIGHT_GREY, {
+          x, y: wallH / 2, z: wallZ + 0.24,
+          castShadow: false, receiveShadow: true,
+        });
+      }
+
+      // Raised planter bed along base of sign wall (trimmed cleanly before Second Gate pillar)
+      addBox(g, wallW - 0.50, 0.34, 0.46, MAT_OFFWHITE, { x: wallCX - 0.25, y: 0.17, z: wallZ + 0.44 });
+
+      // 3D Block Lettering: "SMA NEGERI 66" + "JAKARTA"
+      const line1 = create3DTextGroup('SMA NEGERI 66', {
+        height: 0.58, depth: 0.14, stroke: 0.105, spacing: 0.135, mat: MAT_GATE_BLACK,
+      });
+      line1.position.set(wallCX - 0.18, 1.90, wallZ + 0.25);
+      g.add(line1);
+
+      const line2 = create3DTextGroup('JAKARTA', {
+        height: 0.48, depth: 0.14, stroke: 0.095, spacing: 0.145, mat: MAT_GATE_BLACK,
+      });
+      line2.position.set(wallCX - 0.18, 1.10, wallZ + 0.25);
+      g.add(line2);
+
+      // Left Flanking Crest Plaque (Jaya Raya Shield)
+      const shieldShape = new THREE.Shape();
+      shieldShape.moveTo(-0.52, 0.64);
+      shieldShape.lineTo(0.52, 0.64);
+      shieldShape.lineTo(0.52, -0.09);
+      shieldShape.lineTo(0, -0.68);
+      shieldShape.lineTo(-0.52, -0.09);
+      shieldShape.closePath();
+      const shieldGeo = new THREE.ExtrudeGeometry(shieldShape, { depth: 0.12, bevelEnabled: false });
+      addArchMesh(g, shieldGeo, MAT_WHITE, { x: -12.40, y: 1.56, z: wallZ + 0.24, edgeAngle: 20 });
+      addBox(g, 0.12, 0.72, 0.08, MAT_GATE_BLACK, { x: -12.40, y: 1.56, z: wallZ + 0.38 });
+      addBox(g, 0.34, 0.13, 0.08, MAT_GATE_BLACK, { x: -12.40, y: 1.24, z: wallZ + 0.38 });
+
+      // Right Flanking Crest Plaque (Tut Wuri Handayani Octagonal Emblem — clear of 90° gate pillar)
+      const crestGeo = new THREE.CylinderGeometry(0.50, 0.50, 0.12, 8);
+      crestGeo.rotateX(Math.PI / 2);
+      addArchMesh(g, crestGeo, MAT_WHITE, { x: -2.20, y: 1.56, z: wallZ + 0.30, edgeAngle: 20 });
+      const innerCrestGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.08, 8);
+      innerCrestGeo.rotateX(Math.PI / 2);
+      addArchMesh(g, innerCrestGeo, MAT_MED_GREY, { x: -2.20, y: 1.56, z: wallZ + 0.38, edgeAngle: 20 });
+
+      campus.add(g);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5D. RECESSED SECOND GATE (DIRECT 90° JOIN TO SIGN WALL), POS SATPAM & FOUNTAIN
+    // -------------------------------------------------------------------------
+    function buildSecondGateAndPlaza() {
+      const g = registerEditable('second-gate-post', 'Second Gate & Security Post', new THREE.Group());
+
+      // Left pillar connects DIRECTLY at a 90° corner to the right end of the Sign Wall (-0.8, 25.8)!
+      // ZERO phantom vertical-bar fence segments in between!
+      // Gate spans Z = 25.8 to Z = 32.0 at X = -0.8, facing -X down Jl. Bango III.
+      const gateX = -0.8;
+      const gateCZ = 28.9;
+
+      // Twin gateway structural piers with crisp architectural capitals
+      addBox(g, 0.72, 3.90, 0.72, MAT_WHITE, { x: gateX, y: 1.95, z: 25.8 });
+      addBox(g, 0.84, 0.16, 0.84, MAT_OFFWHITE, { x: gateX, y: 3.94, z: 25.8 });
+      addBox(g, 0.72, 3.90, 0.72, MAT_WHITE, { x: gateX, y: 1.95, z: 32.0 });
+      addBox(g, 0.84, 0.16, 0.84, MAT_OFFWHITE, { x: gateX, y: 3.94, z: 32.0 });
+
+      // Flat Horizontal Overhead Sign Beam ("SMA NEGERI 66 JAKARTA" — NO pitched house roof!)
+      addBox(g, 0.82, 1.48, 7.3, MAT_OFFWHITE, { x: gateX, y: 4.72, z: gateCZ });
+      addBox(g, 1.02, 0.16, 7.56, MAT_WHITE, { x: gateX, y: 5.54, z: gateCZ });
+      // Contrasting header band with crisp 3D lettering
+      addBox(g, 0.10, 0.80, 7.0, MAT_MED_GREY, { x: gateX - 0.43, y: 5.02, z: gateCZ, castShadow: false });
+      const archLine1 = create3DTextGroup('SMA NEGERI 66', {
+        height: 0.30, depth: 0.08, stroke: 0.060, spacing: 0.075, mat: MAT_GATE_BLACK,
+      });
+      archLine1.rotation.y = -Math.PI / 2;
+      archLine1.position.set(gateX - 0.49, 5.20, gateCZ);
+      g.add(archLine1);
+
+      const archLine2 = create3DTextGroup('JAKARTA', {
+        height: 0.24, depth: 0.08, stroke: 0.050, spacing: 0.085, mat: MAT_GATE_BLACK,
+      });
+      archLine2.rotation.y = -Math.PI / 2;
+      archLine2.position.set(gateX - 0.49, 4.82, gateCZ);
+      g.add(archLine2);
+
+      // Four framed rectangular placard panels along lower band of overhead beam
+      for (let i = 0; i < 4; i++) {
+        addBox(g, 0.08, 0.48, 1.48, MAT_WHITE, {
+          x: gateX - 0.43, y: 4.28, z: 26.44 + i * 1.64,
+          castShadow: false,
+        });
+      }
+
+      // Double X-Patterned Metal Gate Leaves (spanning Z = 26.2 to 31.6)
+      const buildGateLeaf = (centerZ) => {
+        const leaf = new THREE.Group();
+        leaf.position.set(gateX, 0, centerZ);
+        const leafW = 2.68;
+        const leafH = 2.55;
+        addBox(leaf, 0.09, leafH, 0.09, MAT_LIGHT_GREY, { x: 0, y: leafH / 2 + 0.08, z: -leafW / 2 });
+        addBox(leaf, 0.09, leafH, 0.09, MAT_LIGHT_GREY, { x: 0, y: leafH / 2 + 0.08, z: leafW / 2 });
+        addBox(leaf, 0.09, 0.09, leafW, MAT_LIGHT_GREY, { x: 0, y: leafH + 0.08, z: 0 });
+        addBox(leaf, 0.09, 0.09, leafW, MAT_LIGHT_GREY, { x: 0, y: 1.38, z: 0 });
+        addBox(leaf, 0.06, 0.65, leafW - 0.1, MAT_OFFWHITE, { x: 0, y: 0.42, z: 0 });
+        for (const zOff of [-0.66, 0.66]) {
+          for (const yOff of [1.05, 1.98]) {
+            addBox(leaf, 0.05, 0.05, 1.48, MAT_MED_GREY, { x: 0, y: yOff, z: zOff, rx: Math.PI / 4 });
+            addBox(leaf, 0.05, 0.05, 1.48, MAT_MED_GREY, { x: 0, y: yOff, z: zOff, rx: -Math.PI / 4 });
+          }
+        }
+        for (let z = -1.1; z <= 1.1; z += 0.36) {
+          addBox(leaf, 0.04, 1.82, 0.04, MAT_MED_GREY, { x: 0, y: 1.65, z, castShadow: false });
+        }
+        g.add(leaf);
+      };
+      buildGateLeaf(27.54);
+      buildGateLeaf(30.26);
+
+      // COMPACT FLAT-ROOFED SECURITY POST (POS SATPAM) directly inside Second Gate beside its left pillar!
+      // Matches the bright white flat roof visible directly behind the second gate in aerial photo!
+      const posX = 1.65;
+      const posZ = 24.15;
+      addBox(g, 3.6, 2.85, 3.1, MAT_WHITE, { x: posX, y: 1.425, z: posZ });
+      // Crisp cantilevered flat white concrete roof slab + slim fascia trim
+      addBox(g, 4.35, 0.24, 3.85, MAT_WHITE, { x: posX, y: 2.97, z: posZ });
+      // Recessed observation windows facing second gate (+Z) & driveway (+X)
+      addBox(g, 1.8, 1.15, 0.12, MAT_DARK_GREY, { x: posX, y: 1.68, z: posZ + 1.54, castShadow: false });
+      addBox(g, 0.12, 1.15, 1.45, MAT_DARK_GREY, { x: posX + 1.79, y: 1.68, z: posZ, castShadow: false });
+      addBox(g, 0.90, 2.05, 0.10, MAT_MED_GREY, { x: posX - 0.85, y: 1.025, z: posZ - 1.54, castShadow: false });
+
+      // Open Paved Entrance Plaza behind Second Gate -> flowing directly into Gedung A's ground-floor driveway passage
+      addBox(g, 21.1, 0.045, 17.2, MAT_LIGHT_GREY, {
+        x: 9.85, y: 0.022, z: 22.8,
+        castShadow: false, receiveShadow: true,
+      });
+      // Open driveway throat passing directly underneath the 2nd & 3rd floor skybridge into the inner courtyard
+      addBox(g, 7.4, 0.045, 8.8, MAT_LIGHT_GREY, {
+        x: 16.75, y: 0.022, z: 9.8,
+        castShadow: false, receiveShadow: true,
+      });
+      // Architectural paving joint lines across the entrance plaza & passage
+      const pPts = [];
+      for (let x = 2.0; x <= 18.8; x += 2.8) {
+        pPts.push(new THREE.Vector3(x, 0.052, 14.3), new THREE.Vector3(x, 0.052, 31.3));
+      }
+      for (let z = 16.8; z <= 29.2; z += 2.8) {
+        pPts.push(new THREE.Vector3(-0.6, 0.052, z), new THREE.Vector3(20.3, 0.052, z));
+      }
+      for (let z = 7.2; z <= 13.4; z += 2.0) {
+        pPts.push(new THREE.Vector3(13.1, 0.052, z), new THREE.Vector3(20.3, 0.052, z));
+      }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pPts), LINE_SUBTLE));
+
+      campus.add(g);
+
+      // WALL-MOUNTED FOUNTAIN, L-SHAPED PLANTERS & CENTER-RIGHT KIOSK/BENCH SEATING IN ENTRANCE PLAZA
+      // (Replaces former freestanding central circular fountain per Edit 4)
+      const fountainGroup = registerEditable('entrance-fountain', 'Entrance Plaza Wall Fountain & Seating', new THREE.Group());
+
+      // 1) Blue-rectangle zone: Rectangular Reflecting Basin & Wall-Mounted Fountain against Gedung A East Wing (Z = 14.0, X = 5.2..10.4)
+      const wfCX = 7.8;
+      const wfBaseZ = 14.05;
+      // Stepped rectangular masonry water basin (5.0m x 3.8m)
+      addBox(fountainGroup, 5.0, 0.42, 3.85, MAT_WHITE, { x: wfCX, y: 0.21, z: 16.05 });
+      addBox(fountainGroup, 4.4, 0.28, 3.25, MAT_LIGHT_GREY, { x: wfCX, y: 0.29, z: 16.05, castShadow: false });
+      // Subtle water ripple & basin tile ink lines
+      const wfWaterPts = [];
+      for (let z = 14.75; z <= 17.35; z += 0.65) {
+        wfWaterPts.push(new THREE.Vector3(wfCX - 2.05, 0.44, z), new THREE.Vector3(wfCX + 2.05, 0.44, z));
+      }
+      fountainGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(wfWaterPts), LINE_SUBTLE));
+
+      // Wall-mounted fountain feature attached directly against Gedung A front wall (Z = 14.05)
+      addBox(fountainGroup, 3.6, 2.45, 0.34, MAT_OFFWHITE, { x: wfCX, y: 1.225, z: wfBaseZ + 0.17 });
+      addBox(fountainGroup, 3.85, 0.16, 0.46, MAT_WHITE, { x: wfCX, y: 2.52, z: wfBaseZ + 0.22 });
+      // Vertical fluted architectural water-wall ribs
+      for (let rx = wfCX - 1.4; rx <= wfCX + 1.4; rx += 0.35) {
+        addBox(fountainGroup, 0.08, 1.95, 0.08, MAT_LIGHT_GREY, { x: rx, y: 1.35, z: wfBaseZ + 0.36, castShadow: false });
+      }
+      // Upper cantilevered spout trough + mid cascading weir lip
+      addBox(fountainGroup, 2.1, 0.18, 0.62, MAT_WHITE, { x: wfCX, y: 1.82, z: wfBaseZ + 0.56 });
+      addBox(fountainGroup, 2.6, 0.16, 0.85, MAT_OFFWHITE, { x: wfCX, y: 1.12, z: wfBaseZ + 0.72 });
+      // Crisp vertical cascading water-curtain ink lines
+      const cascadePts = [];
+      for (let cx = wfCX - 0.88; cx <= wfCX + 0.88; cx += 0.22) {
+        cascadePts.push(
+          new THREE.Vector3(cx, 1.80, wfBaseZ + 0.84),
+          new THREE.Vector3(cx, 1.14, wfBaseZ + 0.92),
+          new THREE.Vector3(cx, 1.10, wfBaseZ + 1.12),
+          new THREE.Vector3(cx, 0.44, wfBaseZ + 1.18)
+        );
+      }
+      fountainGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cascadePts), LINE_SUBTLE));
+
+      // 2) Green dotted outline: L-Shaped Low Masonry Planters & Monochrome Greenery hugging front & left of fountain
+      // Left planter box (X: 4.1..5.1, Z: 14.2..19.2)
+      addBox(fountainGroup, 0.95, 0.56, 4.9, MAT_WHITE, { x: 4.6, y: 0.28, z: 16.65 });
+      addBox(fountainGroup, 0.72, 0.10, 4.65, MAT_MED_GREY, { x: 4.6, y: 0.55, z: 16.65, castShadow: false });
+      // Front planter box (X: 4.1..10.4, Z: 18.2..19.15)
+      addBox(fountainGroup, 6.25, 0.56, 0.92, MAT_WHITE, { x: 7.25, y: 0.28, z: 18.68 });
+      addBox(fountainGroup, 6.0, 0.10, 0.68, MAT_MED_GREY, { x: 7.25, y: 0.55, z: 18.68, castShadow: false });
+      // Geometric monochrome ornamental shrubs inside the L-planters
+      const planterShrubs = [
+        [4.6, 15.0, 0.48], [4.6, 16.4, 0.55], [4.6, 17.8, 0.50],
+        [5.3, 18.68, 0.52], [6.6, 18.68, 0.46], [7.9, 18.68, 0.54], [9.2, 18.68, 0.48],
+      ];
+      for (const [sx, sz, ss] of planterShrubs) {
+        addArchMesh(fountainGroup, new THREE.IcosahedronGeometry(ss, 0), MAT_OFFWHITE, {
+          x: sx, y: 0.56 + ss * 0.72, z: sz, ry: sx * 0.7 + sz * 0.4, edgeAngle: 20,
+        });
+      }
+
+      // 3) Center-Right White Outlined Zone (X ≈ 11.4..14.6, Z ≈ 15.6..20.2): Small White Box Kiosk/Planter + Surrounding Outdoor Benches
+      const kx = 12.6;
+      const kz = 17.8;
+      // Crisp small white architectural box kiosk/planter feature with overhanging flat cap
+      addBox(fountainGroup, 2.05, 1.12, 1.85, MAT_WHITE, { x: kx, y: 0.56, z: kz });
+      addBox(fountainGroup, 2.28, 0.14, 2.08, MAT_OFFWHITE, { x: kx, y: 1.19, z: kz });
+      addBox(fountainGroup, 1.72, 0.10, 1.52, MAT_LIGHT_GREY, { x: kx, y: 1.27, z: kz, castShadow: false });
+      // Small ornamental crown accent on top of kiosk/planter box
+      addArchMesh(fountainGroup, new THREE.IcosahedronGeometry(0.42, 0), MAT_WHITE, { x: kx, y: 1.62, z: kz, edgeAngle: 20 });
+
+      // Outdoor architectural benches / sitting chairs surrounding the white box kiosk
+      const addPlazaBench = (bx, bz, rotY = 0) => {
+        const bg = new THREE.Group();
+        bg.position.set(bx, 0, bz);
+        bg.rotation.y = rotY;
+        // Twin concrete leg plinths
+        addBox(bg, 0.18, 0.42, 0.46, MAT_LIGHT_GREY, { x: -0.62, y: 0.21, z: 0 });
+        addBox(bg, 0.18, 0.42, 0.46, MAT_LIGHT_GREY, { x: 0.62, y: 0.21, z: 0 });
+        // Crisp slatted white bench seat + angled backrest
+        addBox(bg, 1.65, 0.08, 0.50, MAT_WHITE, { x: 0, y: 0.46, z: 0 });
+        addBox(bg, 1.65, 0.34, 0.07, MAT_OFFWHITE, { x: 0, y: 0.68, z: -0.22, rx: -0.14 });
+        fountainGroup.add(bg);
+      };
+      addPlazaBench(kx, kz + 1.62, 0);              // Front bench facing +Z plaza
+      addPlazaBench(kx, kz - 1.62, Math.PI);        // Rear bench facing portal
+      addPlazaBench(kx + 1.62, kz, Math.PI / 2);    // Right bench facing open driveway
+      addPlazaBench(kx - 1.52, kz, -Math.PI / 2);   // Left bench facing fountain planters
+
+      campus.add(fountainGroup);
+    }
+
+    // -------------------------------------------------------------------------
+    // REUSABLE 3-STORY RECESSED CONCRETE SWITCHBACK STAIRWELL WITH TERALIS GRILLE
+    //   Local +Z = Open courtyard-facing bay with vertical-and-diagonal safety grille
+    //   Local -Z = Recessed concrete stairwell back wall & mid-level bordes landing
+    // -------------------------------------------------------------------------
+    function buildSwitchbackStairwell(parent, {
+      x, z, rotY = 0,
+      bayW = 3.8,
+      shaftD = 4.6,
+      floorH = 3.5,
+      floors = 3,
+      hasRoofCutout = false,
+    }) {
+      const sg = new THREE.Group();
+      sg.position.set(x, 0, z);
+      sg.rotation.y = rotY;
+      const totalH = floorH * floors; // 10.5m
+
+      // Enclosing recessed concrete stairwell shaft walls (Left, Right, Back)
+      addBox(sg, 0.22, totalH, shaftD, MAT_OFFWHITE, { x: -bayW / 2 + 0.11, y: totalH / 2 + 0.25, z: -shaftD / 2 });
+      addBox(sg, 0.22, totalH, shaftD, MAT_OFFWHITE, { x: bayW / 2 - 0.11, y: totalH / 2 + 0.25, z: -shaftD / 2 });
+      addBox(sg, bayW, totalH, 0.24, MAT_OFFWHITE, { x: 0, y: totalH / 2 + 0.25, z: -shaftD + 0.12 });
+      // Recessed dark-grey floor base inside shaft
+      addBox(sg, bayW - 0.2, 0.24, shaftD, MAT_LIGHT_GREY, { x: 0, y: 0.12, z: -shaftD / 2 });
+
+      // Wide concrete switchback flights (12 treads per half-flight) + mid-level bordes landing + handrails
+      const treadsPerHalf = 12;
+      const flightW = (bayW - 0.62) / 2;
+      const bordesDepth = 1.28;
+      const flightRunTotal = shaftD - bordesDepth - 0.56;
+      const treadRun = flightRunTotal / treadsPerHalf;
+      const treadRise = (floorH / 2) / treadsPerHalf;
+      const flightSlope = Math.atan2(floorH / 2, flightRunTotal);
+      const railLen = Math.hypot(flightRunTotal, floorH / 2);
+
+      for (let f = 0; f < floors - 1; f++) {
+        const baseY = 0.25 + f * floorH;
+        const midY = baseY + floorH / 2;
+        const topY = baseY + floorH;
+
+        // Mid-level concrete landing (bordes) against back wall
+        addBox(sg, bayW - 0.34, 0.22, bordesDepth, MAT_WHITE, {
+          x: 0, y: midY, z: -shaftD + 0.22 + bordesDepth / 2,
+        });
+        // Back wall & central divider handrails at bordes
+        addBox(sg, bayW - 0.55, 0.055, 0.055, MAT_GATE_BLACK, {
+          x: 0, y: midY + 0.92, z: -shaftD + 0.34, castShadow: false,
+        });
+
+        // 1st Half-Flight (Left lane: ascends from front z = -0.34 toward back bordes)
+        const leftCX = -flightW / 2 - 0.08;
+        for (let t = 0; t < treadsPerHalf; t++) {
+          const ty = baseY + (t + 0.5) * treadRise;
+          const tz = -0.34 - (t + 0.5) * treadRun;
+          addBox(sg, flightW, treadRise + 0.06, treadRun + 0.04, MAT_WHITE, {
+            x: leftCX, y: ty, z: tz, castShadow: true, receiveShadow: true,
+          });
+        }
+        // Angled dark handrails flanking 1st half-flight
+        for (const hx of [-bayW / 2 + 0.28, -0.08]) {
+          addBox(sg, 0.05, 0.06, railLen, MAT_GATE_BLACK, {
+            x: hx,
+            y: baseY + floorH / 4 + 0.90,
+            z: -0.34 - flightRunTotal / 2,
+            rx: flightSlope,
+            castShadow: false,
+          });
+        }
+
+        // 2nd Half-Flight (Right lane: ascends from back bordes forward to upper corridor landing)
+        const rightCX = flightW / 2 + 0.08;
+        for (let t = 0; t < treadsPerHalf; t++) {
+          const ty = midY + (t + 0.5) * treadRise;
+          const tz = -0.34 - flightRunTotal + (t + 0.5) * treadRun;
+          addBox(sg, flightW, treadRise + 0.06, treadRun + 0.04, MAT_WHITE, {
+            x: rightCX, y: ty, z: tz, castShadow: true, receiveShadow: true,
+          });
+        }
+        // Angled dark handrails flanking 2nd half-flight
+        for (const hx of [0.08, bayW / 2 - 0.28]) {
+          addBox(sg, 0.05, 0.06, railLen, MAT_GATE_BLACK, {
+            x: hx,
+            y: midY + floorH / 4 + 0.90,
+            z: -0.34 - flightRunTotal / 2,
+            rx: -flightSlope,
+            castShadow: false,
+          });
+        }
+
+        // Upper corridor landing slab flush with floor slab
+        addBox(sg, bayW - 0.16, 0.24, 0.52, MAT_OFFWHITE, { x: 0, y: topY, z: -0.22 });
+      }
+
+      // Thin Vertical-and-Diagonal Grid Safety Grille (Teralis) across the open courtyard-facing bay (z = -0.02)
+      // Matches real steel teralis photo (1001282167.jpg) in crisp monochrome linework!
+      const grilleZ = -0.04;
+      const gHalfW = bayW / 2 - 0.22;
+      // Vertical steel mullions running full height (ground floor left half stays open for entry passage)
+      for (const gx of [-gHalfW, -gHalfW * 0.34, gHalfW * 0.34, gHalfW]) {
+        const startY = gx < 0 ? 0.25 + floorH : 0.25;
+        const barH = totalH + 0.25 - startY;
+        addBox(sg, 0.055, barH, 0.055, MAT_DARK_GREY, { x: gx, y: startY + barH / 2, z: grilleZ, castShadow: false });
+      }
+      // Horizontal transoms & crisp diagonal X-grid safety bars on each story bay
+      for (let f = 0; f < floors; f++) {
+        const fy = 0.25 + f * floorH;
+        const isGround = f === 0;
+        const barMinX = isGround ? -gHalfW * 0.34 : -gHalfW;
+        const barW = gHalfW - barMinX;
+        const barCX = (barMinX + gHalfW) / 2;
+        // Bottom, mid, and top horizontal grille rails
+        for (const hy of [fy + 0.22, fy + 1.35, fy + 2.45]) {
+          addBox(sg, barW, 0.055, 0.055, MAT_DARK_GREY, { x: barCX, y: hy, z: grilleZ, castShadow: false });
+        }
+        // Diagonal brace struts across the right & middle safety panels (signature teralis geometry!)
+        const panelCols = isGround ? [[gHalfW * 0.34, gHalfW], [-gHalfW * 0.34, gHalfW * 0.34]] : [[-gHalfW, -gHalfW * 0.34], [-gHalfW * 0.34, gHalfW * 0.34], [gHalfW * 0.34, gHalfW]];
+        for (const [px0, px1] of panelCols) {
+          const pw = px1 - px0;
+          const pcx = (px0 + px1) / 2;
+          const diagLen = Math.hypot(pw, 1.12);
+          const diagAng = Math.atan2(1.12, pw);
+          addBox(sg, diagLen, 0.045, 0.045, MAT_DARK_GREY, { x: pcx, y: fy + 0.78, z: grilleZ, rz: diagAng, castShadow: false });
+          addBox(sg, diagLen, 0.045, 0.045, MAT_DARK_GREY, { x: pcx, y: fy + 1.90, z: grilleZ, rz: -diagAng, castShadow: false });
+        }
+      }
+
+      // Optional top 3rd-floor stairwell roof/landing cutout (dashed red square in Inner Courtyard Core!)
+      if (hasRoofCutout) {
+        const cutY = totalH + 0.25;
+        // Raised coffered landing skylight/cutout frame crowning the 3rd-floor stairwell shaft
+        addBox(sg, bayW + 0.16, 0.34, 2.4, MAT_WHITE, { x: 0, y: cutY + 0.16, z: -1.2 });
+        addBox(sg, bayW - 0.5, 0.14, 1.7, MAT_DARK_GREY, { x: 0, y: cutY + 0.32, z: -1.2, castShadow: false });
+        // Crisp louver bars across the top stairwell cutout
+        for (let lx = -bayW / 2 + 0.55; lx <= bayW / 2 - 0.55; lx += 0.45) {
+          addBox(sg, 0.05, 0.12, 1.65, MAT_WHITE, { x: lx, y: cutY + 0.36, z: -1.2, castShadow: false });
+        }
+      }
+
+      parent.add(sg);
+      return sg;
+    }
+
+    // -------------------------------------------------------------------------
+    // 5E. GEDUNG B — LEFT L-SHAPED 3-STORY WING (SHARP TRIANGULAR GABLE + LISPLANG,
+    //     MIDDLE-BAY SWITCHBACK STAIRWELL & CORNER CEREMONY PODIUM)
+    // -------------------------------------------------------------------------
+    function buildGedungB() {
+      const g = registerEditable('gedung-b', 'Gedung B (Left L-Wing)', new THREE.Group());
+      const floorH = 3.5;
+      const floors = 3;
+      const totalH = floorH * floors; // 10.5m
+
+      // Stairwell #1 bay in middle of Gedung B N-S Wing (solid red rectangle in Screenshot 213131):
+      // Z = -3.4 to +0.6 (width 4.0m, centered at Z = -1.4, opening toward basketball court at X = -24.5)
+      const stMinZ = -3.4;
+      const stMaxZ = 0.6;
+      const stCZ = (stMinZ + stMaxZ) / 2;
+
+      // --- 1) Main North-South 3-Story Wing (X: -35.0 to -24.5, Z: -25.0 to +13.5) ---
+      // Classroom core split cleanly around the recessed middle-bay switchback stairwell!
+      addBox(g, 7.8, totalH, 12.9, MAT_WHITE, { x: -31.1, y: totalH / 2 + 0.25, z: 7.05 });    // North segment (Z: 0.6..13.5)
+      addBox(g, 7.8, totalH, 21.6, MAT_WHITE, { x: -31.1, y: totalH / 2 + 0.25, z: -14.2 });   // South segment (Z: -25.0..-3.4)
+      addBox(g, 5.7, totalH, 4.0, MAT_WHITE,  { x: -32.15, y: totalH / 2 + 0.25, z: stCZ });   // Solid rear core behind stairwell (X: -35.0..-29.3)
+      addBox(g, 10.7, 0.25, 38.7, MAT_LIGHT_GREY, { x: -29.75, y: 0.125, z: -5.75 });
+
+      for (let f = 0; f < floors; f++) {
+        const baseY = 0.25 + f * floorH;
+        if (f > 0) {
+          // Corridor slabs & parapets split cleanly around middle stairwell bay (Z = -3.4..+0.6)
+          addBox(g, 2.8, 0.26, 12.9, MAT_OFFWHITE, { x: -25.8, y: baseY, z: 7.05 });
+          addBox(g, 0.22, 1.02, 12.8, MAT_OFFWHITE, { x: -24.52, y: baseY + 0.62, z: 7.05 });
+          addBox(g, 0.06, 0.06, 12.8, MAT_DARK_GREY, { x: -24.52, y: baseY + 1.24, z: 7.05, castShadow: false });
+
+          addBox(g, 2.8, 0.26, 21.6, MAT_OFFWHITE, { x: -25.8, y: baseY, z: -14.2 });
+          addBox(g, 0.22, 1.02, 21.5, MAT_OFFWHITE, { x: -24.52, y: baseY + 0.62, z: -14.2 });
+          addBox(g, 0.06, 0.06, 21.5, MAT_DARK_GREY, { x: -24.52, y: baseY + 1.24, z: -14.2, castShadow: false });
+
+          // North end balcony parapet return & side sun-visor louver hoods
+          addBox(g, 2.8, 1.02, 0.22, MAT_OFFWHITE, { x: -25.8, y: baseY + 0.62, z: 13.4 });
+          addArchMesh(g, createLeanToEaveGeo(2.4, 0.95, 0.36), MAT_WHITE, {
+            x: -25.8, y: baseY + 2.45, z: 13.95,
+          });
+        }
+        for (let z = -22.5; z <= 11.5; z += 4.2) {
+          // Skip front courtyard-facing classroom window inside the recessed middle stairwell bay
+          if (z < stMinZ - 0.6 || z > stMaxZ + 0.6) {
+            addBox(g, 0.14, 1.45, 2.35, MAT_MED_GREY, { x: -27.18, y: baseY + 2.05, z, castShadow: false });
+            if (Math.round(z) % 2 === 0 && (z + 1.65 < stMinZ || z + 1.65 > stMaxZ)) {
+              addBox(g, 0.14, 2.25, 1.05, MAT_DARK_GREY, { x: -27.18, y: baseY + 1.15, z: z + 1.65, castShadow: false });
+            }
+          }
+          addBox(g, 0.14, 1.35, 2.4, MAT_MED_GREY, { x: -35.02, y: baseY + 2.05, z, castShadow: false });
+        }
+      }
+      addBox(g, 10.9, 0.28, 38.8, MAT_OFFWHITE, { x: -29.75, y: totalH + 0.25, z: -5.75 });
+
+      for (let z = -24.6; z <= 13.4; z += 4.22) {
+        addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x: -24.65, y: totalH / 2 + 0.25, z });
+      }
+
+      // STAIRWELL #1: Full-height 3-story recessed switchback stairwell in middle bay of Gedung B!
+      // (Replaces deleted corner exterior stair per Edit 6)
+      buildSwitchbackStairwell(g, {
+        x: -24.55, z: stCZ, rotY: Math.PI / 2,
+        bayW: 3.9, shaftD: 4.75, floorH, floors,
+      });
+
+      // North Gable Facade Decorative Geometric Screen Panel + Framed Banner Bay
+      addBox(g, 3.2, totalH - 0.4, 0.24, MAT_LIGHT_GREY, { x: -32.7, y: totalH / 2 + 0.25, z: 13.58 });
+      for (let y = 1.6; y <= 9.6; y += 1.6) {
+        addBox(g, 3.1, 0.08, 0.08, MAT_WHITE, { x: -32.7, y, z: 13.72, castShadow: false });
+      }
+      addBox(g, 0.36, totalH, 0.22, MAT_OFFWHITE, { x: -27.4, y: totalH / 2 + 0.25, z: 13.56 });
+      addBox(g, 0.36, totalH, 0.22, MAT_OFFWHITE, { x: -34.6, y: totalH / 2 + 0.25, z: 13.56 });
+
+      // --- 2) South L-Return 3-Story Wing (X: -24.5 to -11.0, Z: -25.0 to -14.5) ---
+      addBox(g, 13.5, totalH, 7.8, MAT_WHITE, { x: -17.75, y: totalH / 2 + 0.25, z: -21.1 });
+      addBox(g, 13.6, 0.25, 10.7, MAT_LIGHT_GREY, { x: -17.75, y: 0.125, z: -19.75 });
+
+      for (let f = 0; f < floors; f++) {
+        const baseY = 0.25 + f * floorH;
+        if (f > 0) {
+          addBox(g, 13.5, 0.26, 2.8, MAT_OFFWHITE, { x: -17.75, y: baseY, z: -15.8 });
+          addBox(g, 13.5, 1.02, 0.22, MAT_OFFWHITE, { x: -17.75, y: baseY + 0.62, z: -14.52 });
+          addBox(g, 13.5, 0.06, 0.06, MAT_DARK_GREY, { x: -17.75, y: baseY + 1.24, z: -14.52, castShadow: false });
+        }
+        for (let x = -22.2; x <= -12.6; x += 3.8) {
+          addBox(g, 2.2, 1.45, 0.14, MAT_MED_GREY, { x, y: baseY + 2.05, z: -17.18, castShadow: false });
+          addBox(g, 2.2, 1.35, 0.14, MAT_MED_GREY, { x, y: baseY + 2.05, z: -25.02, castShadow: false });
+        }
+      }
+      addBox(g, 13.8, 0.28, 10.9, MAT_OFFWHITE, { x: -17.75, y: totalH + 0.25, z: -19.75 });
+      for (let x = -24.5; x <= -11.2; x += 4.4) {
+        addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x, y: totalH / 2 + 0.25, z: -14.65 });
+      }
+
+      // --- 3) SHARP TRIANGULAR GABLE ROOF WITH CRISP WHITE FASCIA TRIM (LISPLANG) & DEEP EAVES ---
+      const roofBaseY = totalH + 0.38;
+      const gableW = 13.0;
+      const gableD = 41.2;
+      const gableH = 4.05;
+      const gableCX = -29.75;
+      const gableCZ = -5.75;
+      addArchMesh(g, createGableRoofGeo(gableW, gableD, gableH, 'z'), MAT_LIGHT_GREY, {
+        x: gableCX, y: roofBaseY, z: gableCZ,
+      });
+
+      // Crisp White Raking Fascia Trim Boards (Lisplang) along front (+Z) & rear (-Z) gable triangles
+      const halfGW = gableW / 2;
+      const slopeLen = Math.hypot(halfGW, gableH) + 0.12;
+      const slopeAngle = Math.atan2(gableH, halfGW);
+      for (const zEnd of [gableCZ + gableD / 2 + 0.06, gableCZ - gableD / 2 - 0.06]) {
+        addBox(g, slopeLen, 0.30, 0.16, MAT_WHITE, {
+          x: gableCX - halfGW / 2, y: roofBaseY + gableH / 2 + 0.05, z: zEnd, rz: slopeAngle,
+        });
+        addBox(g, slopeLen, 0.30, 0.16, MAT_WHITE, {
+          x: gableCX + halfGW / 2, y: roofBaseY + gableH / 2 + 0.05, z: zEnd, rz: -slopeAngle,
+        });
+      }
+      addBox(g, 0.16, 0.28, gableD + 0.12, MAT_WHITE, { x: gableCX - halfGW - 0.04, y: roofBaseY + 0.04, z: gableCZ });
+      addBox(g, 0.16, 0.28, gableD + 0.12, MAT_WHITE, { x: gableCX + halfGW + 0.04, y: roofBaseY + 0.04, z: gableCZ });
+
+      // Rear South L-return pitched roof cleanly intersecting the main gable roof ridge
+      addArchMesh(g, createHippedRoofGeo(19.6, 12.6, 4.0, 5.2, 5.6), MAT_LIGHT_GREY, {
+        x: -20.1, y: roofBaseY, z: -19.75,
+      });
+
+      // --- 4) OPEN GROUND-FLOOR CORRIDOR MARGIN + CORNER CEREMONY PODIUM (MIMBAR UPACARA) ---
+      // Extended covered walkway roof removed per Edit 3 — leaving Gedung B's recessed corridor open!
+      // Clean low paved corridor curb & benches along Gedung B front edge
+      addBox(g, 1.0, 0.18, 20.4, MAT_OFFWHITE, { x: -24.1, y: 0.09, z: 0.2, castShadow: false });
+      for (const bz of [7.2, 3.0, -5.8]) {
+        addBox(g, 0.52, 0.44, 2.0, MAT_WHITE, { x: -24.0, y: 0.22, z: bz });
+      }
+
+      // RAISED CONCRETE CEREMONY PODIUM (MIMBAR UPACARA) AT INNER CORNER RIGHT NEXT TO FLAGPOLE!
+      // Positioned at X = -22.2, Z = -12.0 (right beside flagpole at -19.2, -11.4, facing +X court!)
+      const podGroup = new THREE.Group();
+      podGroup.position.set(-22.2, 0, -12.0);
+      const podW = 2.6;  // along X
+      const podD = 3.5;  // along Z
+      const podH = 0.78;
+      // Raised rectangular concrete platform & crisp dark top trim
+      addBox(podGroup, podW, podH, podD, MAT_WHITE, { x: 0, y: podH / 2, z: 0 });
+      addBox(podGroup, podW + 0.14, 0.08, podD + 0.14, MAT_OFFWHITE, { x: 0, y: podH + 0.04, z: 0 });
+      // Concrete side steps ascending cleanly on the North (+Z) side of the podium
+      for (let s = 0; s < 3; s++) {
+        const sh = ((s + 1) / 3) * podH;
+        const sz = podD / 2 + 0.18 + (2 - s) * 0.34;
+        addBox(podGroup, 1.45, sh, 0.34, MAT_OFFWHITE, { x: 0.15, y: sh / 2, z: sz });
+      }
+      // Low front & side podium parapet balustrade + central speaking lectern facing basketball court (+X)
+      addBox(podGroup, 0.16, 0.72, podD - 0.16, MAT_OFFWHITE, { x: podW / 2 - 0.10, y: podH + 0.40, z: 0 });
+      addBox(podGroup, podW - 0.2, 0.72, 0.16, MAT_OFFWHITE, { x: 0, y: podH + 0.40, z: -podD / 2 + 0.10 });
+      addBox(podGroup, 0.55, 1.05, 0.72, MAT_LIGHT_GREY, { x: podW / 2 - 0.42, y: podH + 0.56, z: 0 });
+      // Four square concrete columns supporting the projecting pitched tile-roof canopy
+      for (const cx of [-podW / 2 + 0.20, podW / 2 - 0.20]) {
+        for (const cz of [-podD / 2 + 0.20, podD / 2 - 0.20]) {
+          addBox(podGroup, 0.26, 2.75, 0.26, MAT_WHITE, { x: cx, y: podH + 1.42, z: cz });
+        }
+      }
+      // Crisp eaves fascia beam + projecting pitched hipped tile-roof canopy
+      addBox(podGroup, podW + 0.16, 0.20, podD + 0.16, MAT_OFFWHITE, { x: 0, y: podH + 2.82, z: 0 });
+      addArchMesh(podGroup, createHippedRoofGeo(podW + 1.15, podD + 1.25, 1.18, 1.35, 1.65), MAT_LIGHT_GREY, {
+        x: 0.15, y: podH + 2.92, z: 0,
+      });
+      g.add(podGroup);
+
+      campus.add(g);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5F. MAIN BASKETBALL / FUTSAL COURT & BACK COVERED BREEZEWAY
+    // -------------------------------------------------------------------------
+    function buildMainCourt() {
+      const g = registerEditable('main-court', 'Main Basketball Court', new THREE.Group());
+
+      // Entry paved plaza north of court (between front L-canopy, sign wall, and court)
+      addBox(g, 19.2, 0.04, 16.8, MAT_WHITE, {
+        x: -7.5, y: 0.02, z: 17.0,
+        castShadow: false, receiveShadow: true,
+      });
+      // Architectural paving stripes along front edge of basketball court (matches aerial photo!)
+      const entryStripePts = [];
+      for (let z = 9.2; z <= 13.6; z += 0.9) {
+        entryStripePts.push(new THREE.Vector3(-14.0, 0.052, z), new THREE.Vector3(-2.5, 0.052, z));
+      }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(entryStripePts), LINE_SUBTLE));
+
+      // Main Outdoor Sports Court Slab (16m x 22m, X: -18.5..-2.5, Z: -13.5..+8.5)
+      const courtCX = -10.5;
+      const courtCZ = -2.5;
+      addBox(g, 16.0, 0.05, 22.0, MAT_LIGHT_GREY, {
+        x: courtCX, y: 0.025, z: courtCZ,
+        castShadow: false, receiveShadow: true,
+      });
+
+      const ly = 0.065;
+      const pts = [];
+      const addSeg = (x1, z1, x2, z2) => pts.push(new THREE.Vector3(x1, ly, z1), new THREE.Vector3(x2, ly, z2));
+      const addArc = (cx, cz, r, aStart, aEnd, steps = 28) => {
+        for (let i = 0; i < steps; i++) {
+          const t0 = aStart + (aEnd - aStart) * (i / steps);
+          const t1 = aStart + (aEnd - aStart) * ((i + 1) / steps);
+          addSeg(cx + Math.cos(t0) * r, cz + Math.sin(t0) * r, cx + Math.cos(t1) * r, cz + Math.sin(t1) * r);
+        }
+      };
+
+      const hw = 7.2, hl = 10.2;
+      addSeg(courtCX - hw, courtCZ - hl, courtCX + hw, courtCZ - hl);
+      addSeg(courtCX + hw, courtCZ - hl, courtCX + hw, courtCZ + hl);
+      addSeg(courtCX + hw, courtCZ + hl, courtCX - hw, courtCZ + hl);
+      addSeg(courtCX - hw, courtCZ + hl, courtCX - hw, courtCZ - hl);
+      addSeg(courtCX - hw, courtCZ, courtCX + hw, courtCZ);
+      addArc(courtCX, courtCZ, 1.9, 0, Math.PI * 2, 36);
+      addArc(courtCX, courtCZ, 0.5, 0, Math.PI * 2, 16);
+
+      for (const dir of [-1, 1]) {
+        const endZ = courtCZ + dir * hl;
+        const keyZ = endZ - dir * 4.4;
+        addSeg(courtCX - 2.1, endZ, courtCX - 2.1, keyZ);
+        addSeg(courtCX + 2.1, endZ, courtCX + 2.1, keyZ);
+        addSeg(courtCX - 2.1, keyZ, courtCX + 2.1, keyZ);
+        addArc(courtCX, keyZ, 1.65, 0, Math.PI * 2, 28);
+        const hoopZ = endZ - dir * 1.1;
+        if (dir === 1) {
+          addArc(courtCX, hoopZ, 5.4, Math.PI, Math.PI * 2, 32);
+        } else {
+          addArc(courtCX, hoopZ, 5.4, 0, Math.PI, 32);
+        }
+      }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), LINE_COURT));
+
+      // Dual Basketball Backboards & Hoops
+      const buildHoop = (x, z, facingDir) => {
+        const hGroup = new THREE.Group();
+        hGroup.position.set(x, 0.05, z);
+        if (facingDir < 0) hGroup.rotation.y = Math.PI;
+        addBox(hGroup, 0.65, 0.14, 0.65, MAT_OFFWHITE, { y: 0.07 });
+        addArchMesh(hGroup, new THREE.CylinderGeometry(0.09, 0.10, 3.55, 10), MAT_DARK_GREY, { y: 1.85, z: -0.55, edgeAngle: 25 });
+        addBox(hGroup, 0.14, 0.14, 0.85, MAT_DARK_GREY, { y: 3.35, z: -0.15 });
+        addBox(hGroup, 0.06, 0.06, 1.15, MAT_DARK_GREY, { x: -0.42, y: 3.65, z: -0.22, ry: -0.45, rx: -0.35 });
+        addBox(hGroup, 0.06, 0.06, 1.15, MAT_DARK_GREY, { x: 0.42, y: 3.65, z: -0.22, ry: 0.45, rx: -0.35 });
+        addBox(hGroup, 1.8, 1.1, 0.07, MAT_WHITE, { y: 3.45, z: 0.28 });
+        const sqPts = [
+          new THREE.Vector3(-0.30, 3.12, 0.33), new THREE.Vector3(0.30, 3.12, 0.33),
+          new THREE.Vector3(0.30, 3.12, 0.33), new THREE.Vector3(0.30, 3.55, 0.33),
+          new THREE.Vector3(0.30, 3.55, 0.33), new THREE.Vector3(-0.30, 3.55, 0.33),
+          new THREE.Vector3(-0.30, 3.55, 0.33), new THREE.Vector3(-0.30, 3.12, 0.33),
+        ];
+        hGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(sqPts), LINE_INK));
+        const rimGeo = new THREE.TorusGeometry(0.24, 0.025, 8, 18);
+        rimGeo.rotateX(Math.PI / 2);
+        addArchMesh(hGroup, rimGeo, MAT_GATE_BLACK, { y: 3.05, z: 0.58, edgeAngle: 30 });
+        addArchMesh(hGroup, new THREE.CylinderGeometry(0.23, 0.14, 0.42, 10, 1, true), MAT_OFFWHITE, {
+          y: 2.83, z: 0.58, edgeAngle: 12, castShadow: false,
+        });
+        g.add(hGroup);
+      };
+      buildHoop(courtCX, 7.6, -1);
+      buildHoop(courtCX, -12.6, 1);
+
+      // Ceremonial Flagpole
+      addBox(g, 1.2, 0.32, 1.2, MAT_WHITE, { x: -19.2, y: 0.16, z: -11.4 });
+      addBox(g, 0.72, 0.28, 0.72, MAT_OFFWHITE, { x: -19.2, y: 0.46, z: -11.4 });
+      addArchMesh(g, new THREE.CylinderGeometry(0.04, 0.08, 11.2, 8), MAT_WHITE, { x: -19.2, y: 6.2, z: -11.4, edgeAngle: 30 });
+      addBox(g, 1.65, 0.95, 0.03, MAT_OFFWHITE, { x: -18.35, y: 11.2, z: -11.4 });
+
+      // Back Covered Breezeway behind Main Basketball Court (crisp matte WHITE roof connecting Gedung B <-> Gedung A!)
+      addBox(g, 15.6, 0.24, 3.2, MAT_OFFWHITE, { x: -3.2, y: 0.12, z: -15.4 });
+      addBox(g, 15.6, 0.24, 2.8, MAT_WHITE, { x: -3.2, y: 3.45, z: -18.6 });
+      const bRibs = [];
+      for (let x = -10.2; x <= 3.8; x += 1.4) {
+        bRibs.push(new THREE.Vector3(x, 3.58, -19.95), new THREE.Vector3(x, 3.58, -17.25));
+      }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(bRibs), LINE_SUBTLE));
+      for (let x = -10.4; x <= 4.0; x += 3.6) {
+        addBox(g, 0.30, 3.35, 0.30, MAT_WHITE, { x, y: 1.675, z: -17.35 });
+        addBox(g, 0.30, 3.35, 0.30, MAT_WHITE, { x, y: 1.675, z: -19.85 });
+      }
+
+      // --- MAIN COURT RIGHT CORRIDOR EDGE: TILED APRON, CONCRETE DRAINAGE CHANNEL (GOT),
+      //     ANGLED UTILITY WALL PLATE & CURVING BORDER CURB INTO GEDUNG A BASE CORNER (Edit 2) ---
+      // 1) Tiled Ground-Floor Corridor Apron along Gedung A East Wing west wall (X: 2.85..4.55, Z: -15.0..+14.0)
+      addBox(g, 1.70, 0.16, 29.0, MAT_WHITE, { x: 3.70, y: 0.08, z: -0.5, castShadow: false, receiveShadow: true });
+      const corrTilePts = [];
+      for (let z = -14.5; z <= 13.5; z += 1.0) {
+        corrTilePts.push(new THREE.Vector3(2.86, 0.168, z), new THREE.Vector3(4.54, 0.168, z));
+      }
+      corrTilePts.push(new THREE.Vector3(3.70, 0.168, -14.95), new THREE.Vector3(3.70, 0.168, 13.95));
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(corrTilePts), LINE_SUBTLE));
+
+      // 2) Narrow Concrete-Slab Covered Drainage Channel (Got) directly beside the tiled corridor edge (X: 2.15..2.85)
+      addBox(g, 0.70, 0.10, 28.6, MAT_DARK_GREY, { x: 2.50, y: 0.05, z: -0.5, castShadow: false, receiveShadow: true });
+      for (let z = -14.2; z <= 13.2; z += 1.24) {
+        addBox(g, 0.64, 0.08, 1.14, MAT_LIGHT_GREY, {
+          x: 2.50, y: 0.13, z, castShadow: false, receiveShadow: true,
+        });
+      }
+
+      // 3) Tree Strip Low Border Curb curving cleanly from court edge (X=-1.65) into Gedung A base corner (X=4.5, Z=13.8)
+      const curbPtsXZ = [
+        [-1.65, -13.6],
+        [-1.65,  10.2],
+        [-1.40,  11.45],
+        [-0.75,  12.45],
+        [ 0.25,  13.20],
+        [ 1.55,  13.65],
+        [ 4.45,  13.85],
+      ];
+      for (let i = 0; i < curbPtsXZ.length - 1; i++) {
+        const [x0, z0] = curbPtsXZ[i];
+        const [x1, z1] = curbPtsXZ[i + 1];
+        const len = Math.hypot(x1 - x0, z1 - z0) + 0.08;
+        const ang = Math.atan2(x1 - x0, z1 - z0);
+        addBox(g, 0.24, 0.28, len, MAT_OFFWHITE, {
+          x: (x0 + x1) / 2, y: 0.14, z: (z0 + z1) / 2, ry: ang,
+        });
+      }
+      // Subtle grass/soil planter bed fill behind the curving curb
+      addBox(g, 3.65, 0.06, 25.0, MAT_OFFWHITE, { x: 0.25, y: 0.03, z: -1.1, castShadow: false, receiveShadow: true });
+
+      // 4) Low Concrete Wall Plate / Angled Utility Plinth connecting along the curved tree-strip corner into Gedung A
+      addBox(g, 2.35, 0.72, 1.45, MAT_WHITE, { x: 1.05, y: 0.36, z: 12.15, ry: -0.22 });
+      addBox(g, 2.48, 0.10, 1.58, MAT_OFFWHITE, { x: 1.05, y: 0.76, z: 12.15, ry: -0.22 });
+      // Recessed utility service plate detail on angled plinth face
+      addBox(g, 1.25, 0.42, 0.08, MAT_LIGHT_GREY, { x: 0.98, y: 0.42, z: 12.88, ry: -0.22, castShadow: false });
+
+      campus.add(g);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5G. GEDUNG A — 4-SHAPED 3-STORY COMPLEX, SKYBRIDGE, STEPPED PORTAL ROOFS
+    //     & CONJOINED 2ND-FLOOR MOSQUE (SINGLE RIBBED DOME, ZERO MINARETS!)
+    // -------------------------------------------------------------------------
+    function buildGedungA() {
+      const g = registerEditable('gedung-a', 'Gedung A (4-Shaped Complex & Mosque)', new THREE.Group());
+      const floorH = 3.5;
+      const floors = 3;
+      const totalH = floorH * floors; // 10.5m
+
+      const buildWing = ({
+        minX, maxX, minZ, maxZ,
+        corridorSide,
+        outerEaveSide = null,
+        corridorMaxZ = maxZ,
+        stairCutoutZ = null, // [cutMinZ, cutMaxZ] for recessed stairwell along Z-running wing
+        stairCutoutX = null, // [cutMinX, cutMaxX] for recessed stairwell along X-running wing
+      }) => {
+        const w = maxX - minX;
+        const d = maxZ - minZ;
+        const cx = (minX + maxX) / 2;
+        const cz = (minZ + maxZ) / 2;
+        const corrW = 2.3;
+
+        addBox(g, w + 0.2, 0.25, d + 0.2, MAT_LIGHT_GREY, { x: cx, y: 0.125, z: cz });
+
+        let coreW = w, coreD = d, coreCX = cx, coreCZ = cz;
+        if (corridorSide === 'east')  { coreW = w - corrW; coreCX = minX + coreW / 2; }
+        if (corridorSide === 'west')  { coreW = w - corrW; coreCX = maxX - coreW / 2; }
+        if (corridorSide === 'north') { coreD = d - corrW; coreCZ = minZ + coreD / 2; }
+        if (corridorSide === 'south') { coreD = d - corrW; coreCZ = maxZ - coreD / 2; }
+
+        // Split classroom core cleanly around any recessed switchback stairwell bay!
+        if (stairCutoutZ) {
+          const [s0, s1] = stairCutoutZ;
+          if (s0 > minZ + 0.2) addBox(g, coreW, totalH, s0 - minZ, MAT_WHITE, { x: coreCX, y: totalH / 2 + 0.25, z: (minZ + s0) / 2 });
+          if (maxZ > s1 + 0.2) addBox(g, coreW, totalH, maxZ - s1, MAT_WHITE, { x: coreCX, y: totalH / 2 + 0.25, z: (s1 + maxZ) / 2 });
+          // Solid rear wall behind the recessed stairwell shaft
+          const backW = Math.max(0.5, coreW - 2.6);
+          const backX = corridorSide === 'east' ? minX + backW / 2 : maxX - backW / 2;
+          addBox(g, backW, totalH, s1 - s0, MAT_WHITE, { x: backX, y: totalH / 2 + 0.25, z: (s0 + s1) / 2 });
+        } else if (stairCutoutX) {
+          const [s0, s1] = stairCutoutX;
+          if (s0 > minX + 0.2) addBox(g, s0 - minX, totalH, coreD, MAT_WHITE, { x: (minX + s0) / 2, y: totalH / 2 + 0.25, z: coreCZ });
+          if (maxX > s1 + 0.2) addBox(g, maxX - s1, totalH, coreD, MAT_WHITE, { x: (s1 + maxX) / 2, y: totalH / 2 + 0.25, z: coreCZ });
+          const backD = Math.max(0.5, coreD - 2.6);
+          const backZ = corridorSide === 'south' ? maxZ - backD / 2 : minZ + backD / 2;
+          addBox(g, s1 - s0, totalH, backD, MAT_WHITE, { x: (s0 + s1) / 2, y: totalH / 2 + 0.25, z: backZ });
+        } else {
+          addBox(g, coreW, totalH, coreD, MAT_WHITE, { x: coreCX, y: totalH / 2 + 0.25, z: coreCZ });
+        }
+
+        for (let f = 0; f < floors; f++) {
+          const baseY = 0.25 + f * floorH;
+          if (f > 0) {
+            // Split floor slab cleanly around recessed stairwell shaft so stairs are never blocked!
+            if (stairCutoutZ) {
+              const [s0, s1] = stairCutoutZ;
+              if (s0 > minZ + 0.2) addBox(g, w, 0.24, s0 - minZ, MAT_OFFWHITE, { x: cx, y: baseY, z: (minZ + s0) / 2 });
+              if (maxZ > s1 + 0.2) addBox(g, w, 0.24, maxZ - s1, MAT_OFFWHITE, { x: cx, y: baseY, z: (s1 + maxZ) / 2 });
+            } else if (stairCutoutX) {
+              const [s0, s1] = stairCutoutX;
+              if (s0 > minX + 0.2) addBox(g, s0 - minX, 0.24, d, MAT_OFFWHITE, { x: (minX + s0) / 2, y: baseY, z: cz });
+              if (maxX > s1 + 0.2) addBox(g, maxX - s1, 0.24, d, MAT_OFFWHITE, { x: (s1 + maxX) / 2, y: baseY, z: cz });
+            } else {
+              addBox(g, w, 0.24, d, MAT_OFFWHITE, { x: cx, y: baseY, z: cz });
+            }
+
+            const pY = baseY + 0.62;
+            const rY = baseY + 1.24;
+            if (corridorSide === 'east') {
+              const pEnd = corridorMaxZ;
+              if (stairCutoutZ) {
+                const [s0, s1] = stairCutoutZ;
+                if (s0 > minZ + 0.2) {
+                  addBox(g, 0.22, 1.0, s0 - minZ, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: (minZ + s0) / 2 });
+                  addBox(g, 0.06, 0.06, s0 - minZ, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: (minZ + s0) / 2, castShadow: false });
+                }
+                if (pEnd > s1 + 0.2) {
+                  addBox(g, 0.22, 1.0, pEnd - s1, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: (s1 + pEnd) / 2 });
+                  addBox(g, 0.06, 0.06, pEnd - s1, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: (s1 + pEnd) / 2, castShadow: false });
+                }
+              } else {
+                const pLen = pEnd - minZ;
+                const pCZ = (minZ + pEnd) / 2;
+                addBox(g, 0.22, 1.0, pLen, MAT_OFFWHITE, { x: maxX - 0.12, y: pY, z: pCZ });
+                addBox(g, 0.06, 0.06, pLen, MAT_DARK_GREY, { x: maxX - 0.12, y: rY, z: pCZ, castShadow: false });
+              }
+            } else if (corridorSide === 'west') {
+              const pLen = corridorMaxZ - minZ;
+              const pCZ = (minZ + corridorMaxZ) / 2;
+              addBox(g, 0.22, 1.0, pLen, MAT_OFFWHITE, { x: minX + 0.12, y: pY, z: pCZ });
+              addBox(g, 0.06, 0.06, pLen, MAT_DARK_GREY, { x: minX + 0.12, y: rY, z: pCZ, castShadow: false });
+            } else if (corridorSide === 'south') {
+              if (stairCutoutX) {
+                const [s0, s1] = stairCutoutX;
+                if (s0 > minX + 0.2) {
+                  addBox(g, s0 - minX, 1.0, 0.22, MAT_OFFWHITE, { x: (minX + s0) / 2, y: pY, z: minZ + 0.12 });
+                  addBox(g, s0 - minX, 0.06, 0.06, MAT_DARK_GREY, { x: (minX + s0) / 2, y: rY, z: minZ + 0.12, castShadow: false });
+                }
+                if (maxX > s1 + 0.2) {
+                  addBox(g, maxX - s1, 1.0, 0.22, MAT_OFFWHITE, { x: (s1 + maxX) / 2, y: pY, z: minZ + 0.12 });
+                  addBox(g, maxX - s1, 0.06, 0.06, MAT_DARK_GREY, { x: (s1 + maxX) / 2, y: rY, z: minZ + 0.12, castShadow: false });
+                }
+              } else {
+                addBox(g, w, 1.0, 0.22, MAT_OFFWHITE, { x: cx, y: pY, z: minZ + 0.12 });
+                addBox(g, w, 0.06, 0.06, MAT_DARK_GREY, { x: cx, y: rY, z: minZ + 0.12, castShadow: false });
+              }
+            } else if (corridorSide === 'north') {
+              addBox(g, w, 1.0, 0.22, MAT_OFFWHITE, { x: cx, y: pY, z: maxZ - 0.12 });
+              addBox(g, w, 0.06, 0.06, MAT_DARK_GREY, { x: cx, y: rY, z: maxZ - 0.12, castShadow: false });
+            }
+          }
+
+          if (corridorSide === 'east' || corridorSide === 'west') {
+            for (let z = minZ + 2.4; z <= maxZ - 2.4; z += 4.0) {
+              const inCut = stairCutoutZ && z >= stairCutoutZ[0] - 0.8 && z <= stairCutoutZ[1] + 0.8;
+              if (!inCut && z <= corridorMaxZ - 0.5) {
+                addBox(g, 0.14, 1.4, 2.3, MAT_MED_GREY, {
+                  x: corridorSide === 'east' ? coreCX + coreW / 2 + 0.02 : coreCX - coreW / 2 - 0.02,
+                  y: baseY + 2.0, z, castShadow: false,
+                });
+              }
+              addBox(g, 0.14, 1.4, 2.3, MAT_MED_GREY, {
+                x: corridorSide === 'east' ? minX - 0.02 : maxX + 0.02,
+                y: baseY + 2.0, z, castShadow: false,
+              });
+            }
+          } else {
+            for (let x = minX + 2.4; x <= maxX - 2.4; x += 4.0) {
+              const inCut = stairCutoutX && x >= stairCutoutX[0] - 0.8 && x <= stairCutoutX[1] + 0.8;
+              if (!inCut) {
+                addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, {
+                  x, y: baseY + 2.0,
+                  z: corridorSide === 'south' ? coreCZ - coreD / 2 - 0.02 : coreCZ + coreD / 2 + 0.02,
+                  castShadow: false,
+                });
+              }
+              addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, {
+                x, y: baseY + 2.0,
+                z: corridorSide === 'south' ? maxZ + 0.02 : minZ - 0.02,
+                castShadow: false,
+              });
+            }
+          }
+
+          // Continuous horizontal tiered roof visors (topi-topi) between 1st/2nd and 2nd/3rd floors!
+          if (outerEaveSide === 'west' && f < 2) {
+            const eaveD = f === 0 ? 1.65 : 1.35; // Deeper ground-floor cantilevered eave over tiled corridor!
+            addArchMesh(g, createLeanToEaveGeo(d, eaveD, 0.58), MAT_LIGHT_GREY, {
+              x: minX - eaveD / 2, y: baseY + floorH - 0.45, z: cz, ry: -Math.PI / 2,
+            });
+          }
+        }
+
+        // Ground-floor wall pilasters & angled structural support brackets under East Wing west cantilevered eave (Edit 2!)
+        if (outerEaveSide === 'west') {
+          for (let z = -14.0; z <= 13.6; z += 4.0) {
+            // Wall column pilaster
+            addBox(g, 0.28, floorH, 0.36, MAT_WHITE, { x: minX - 0.10, y: 0.25 + floorH / 2, z });
+            // Horizontal cantilever bracket arm
+            addBox(g, 1.45, 0.16, 0.18, MAT_OFFWHITE, { x: minX - 0.78, y: 3.22, z });
+            // Angled 45° structural knee-brace bracket strut extending from column to outer eave beam
+            addBox(g, 1.32, 0.14, 0.14, MAT_LIGHT_GREY, { x: minX - 0.62, y: 2.74, z, rz: -Math.PI / 4 });
+          }
+          // Longitudinal eave soffit beam connecting bracket tips above tiled corridor
+          addBox(g, 0.18, 0.18, 28.4, MAT_OFFWHITE, { x: minX - 1.42, y: 3.16, z: -0.2 });
+        }
+
+        addBox(g, w + 0.3, 0.26, d + 0.3, MAT_OFFWHITE, { x: cx, y: totalH + 0.25, z: cz });
+
+        if (corridorSide === 'east' || corridorSide === 'west') {
+          const colX = corridorSide === 'east' ? maxX - 0.24 : minX + 0.24;
+          for (let z = minZ + 0.4; z <= maxZ - 0.3; z += 4.0) {
+            if (corridorSide === 'west' && z > corridorMaxZ + 0.3) continue;
+            const colH = (corridorSide === 'east' && z > corridorMaxZ + 0.3) ? floorH : totalH;
+            addBox(g, 0.44, colH, 0.44, MAT_WHITE, { x: colX, y: colH / 2 + 0.25, z });
+          }
+        } else {
+          const colZ = corridorSide === 'south' ? minZ + 0.24 : maxZ - 0.24;
+          for (let x = minX + 0.4; x <= maxX - 0.3; x += 4.0) {
+            addBox(g, 0.44, totalH, 0.44, MAT_WHITE, { x, y: totalH / 2 + 0.25, z: colZ });
+          }
+        }
+      };
+
+      // 4 Wings of Gedung A — EXTENDED FULL-SCALE 4-SHAPED RING (Edit 1) with recessed stairwell cutouts (Edit 6)!
+      // 1) East Wing (left of inner courtyard, with Stairwell #2 cutout at Z = -13.4..-9.6 near SE inner corner)
+      buildWing({
+        minX: 4.5, maxX: 13.0, minZ: -31.5, maxZ: 14.0,
+        corridorSide: 'east', outerEaveSide: 'west', corridorMaxZ: 5.5,
+        stairCutoutZ: [-13.4, -9.6],
+      });
+      // 2) West Wing (meets Extended Front-Right L-Wrap Wing cleanly at Z = 14.0 with zero overlap)
+      buildWing({
+        minX: 29.0, maxX: 37.5, minZ: -22.0, maxZ: 14.0,
+        corridorSide: 'west', corridorMaxZ: 5.5,
+      });
+      // 3) Inner North Wing (with Stairwell #3 cutout at X = 25.0..28.8 near NW inner corner)
+      buildWing({
+        minX: 20.5, maxX: 29.0, minZ: 5.5, maxZ: 14.0,
+        corridorSide: 'south',
+        stairCutoutX: [25.0, 28.8],
+      });
+      // 4) South Wing
+      buildWing({ minX: 13.0, maxX: 29.0, minZ: -22.0, maxZ: -13.5, corridorSide: 'north' });
+
+      // 5) EXTENDED FRONT-RIGHT L-WRAP WING (Edit 1: wraps 90° left along Z = 14.0..24.5 from West Wing to Entrance Plaza edge X = 20.5!)
+      const extMinX = 20.5, extMaxX = 37.5;
+      const extMinZ = 14.0, extMaxZ = 24.5;
+      const extW = extMaxX - extMinX; // 17.0m
+      const extD = extMaxZ - extMinZ; // 10.5m
+      const extCX = (extMinX + extMaxX) / 2;
+      const extCZ = (extMinZ + extMaxZ) / 2;
+      addBox(g, extW + 0.2, 0.25, extD + 0.2, MAT_LIGHT_GREY, { x: extCX, y: 0.125, z: extCZ });
+      addBox(g, extW, totalH, extD, MAT_WHITE, { x: extCX, y: totalH / 2 + 0.25, z: extCZ });
+      addBox(g, extW + 0.3, 0.26, extD + 0.3, MAT_OFFWHITE, { x: extCX, y: totalH + 0.25, z: extCZ });
+      for (let f = 0; f < floors; f++) {
+        const baseY = 0.25 + f * floorH;
+        if (f > 0) {
+          addBox(g, extW + 0.16, 0.22, extD + 0.16, MAT_OFFWHITE, { x: extCX, y: baseY, z: extCZ });
+        }
+        // Front (+Z) facade windows along extended front-right edge
+        for (let wx = 22.8; wx <= 35.2; wx += 4.0) {
+          addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, { x: wx, y: baseY + 2.0, z: extMaxZ + 0.03, castShadow: false });
+        }
+        // Entrance-plaza-facing (-X) & right-outer (+X) windows along extended front-right wing
+        for (let wz = 16.5; wz <= 22.5; wz += 3.6) {
+          addBox(g, 0.14, 1.4, 2.2, MAT_MED_GREY, { x: extMinX - 0.03, y: baseY + 2.0, z: wz, castShadow: false });
+          addBox(g, 0.14, 1.4, 2.3, MAT_MED_GREY, { x: extMaxX + 0.02, y: baseY + 2.0, z: wz, castShadow: false });
+        }
+        // Crisp cantilevered horizontal visors (topi-topi) along front (+Z) & plaza-facing (-X) facades
+        if (f < 2) {
+          addArchMesh(g, createLeanToEaveGeo(extW, 1.15, 0.48), MAT_LIGHT_GREY, {
+            x: extCX, y: baseY + floorH - 0.42, z: extMaxZ + 0.58, ry: 0,
+          });
+          addArchMesh(g, createLeanToEaveGeo(extD, 1.05, 0.44), MAT_LIGHT_GREY, {
+            x: extMinX - 0.52, y: baseY + floorH - 0.42, z: extCZ, ry: -Math.PI / 2,
+          });
+        }
+      }
+
+      // --- STAIRWELL #2 (INNER SE CORNER OF GEDUNG A EAST WING, Z = -13.4..-9.6, Screenshot 213214) ---
+      buildSwitchbackStairwell(g, {
+        x: 12.96, z: -11.5, rotY: Math.PI / 2,
+        bayW: 3.7, shaftD: 4.5, floorH, floors,
+      });
+
+      // --- STAIRWELL #3 (INNER COURTYARD CORE OF GEDUNG A NORTH WING, X = 25.0..28.8, edited-image_2) ---
+      // Includes top 3rd-floor landing/roof cutout frame at dashed red square!
+      buildSwitchbackStairwell(g, {
+        x: 26.9, z: 5.54, rotY: Math.PI,
+        bayW: 3.7, shaftD: 4.6, floorH, floors,
+        hasRoofCutout: true,
+      });
+
+      // --- 2ND & 3RD FLOOR CONNECTING SKYBRIDGE OVER OPEN GROUND-FLOOR DRIVEWAY PASSAGE ---
+      const bridgeW = 7.5;     // X: 13.0 to 20.5
+      const bridgeCX = 16.75;
+      const bridgeD = 8.5;     // Z: 5.5 to 14.0
+      const bridgeCZ = 9.75;
+      const bridgeFloor2Y = 0.25 + floorH;     // 3.75m
+      const bridgeFloor3Y = 0.25 + floorH * 2; // 7.25m
+
+      // Structural floor 2 slab & soffit portal girders (ground floor Y=0..3.60m completely open underneath!)
+      addBox(g, bridgeW, 0.28, bridgeD, MAT_OFFWHITE, { x: bridgeCX, y: bridgeFloor2Y, z: bridgeCZ });
+      addBox(g, bridgeW, 0.28, 0.34, MAT_LIGHT_GREY, { x: bridgeCX, y: bridgeFloor2Y - 0.26, z: 13.83 });
+      addBox(g, bridgeW, 0.28, 0.34, MAT_LIGHT_GREY, { x: bridgeCX, y: bridgeFloor2Y - 0.26, z: 5.67 });
+
+      // Enclosed 2-story bridge block spanning Floors 2 & 3 seamlessly between East & North Wings
+      addBox(g, 9.76, floorH * 2 - 0.26, 6.2, MAT_WHITE, { x: 15.60, y: bridgeFloor2Y + floorH, z: 10.9 });
+      addBox(g, bridgeW, 0.24, bridgeD, MAT_OFFWHITE, { x: bridgeCX, y: bridgeFloor3Y, z: bridgeCZ });
+      addBox(g, bridgeW + 0.1, 0.26, bridgeD + 0.3, MAT_OFFWHITE, { x: bridgeCX, y: totalH + 0.25, z: bridgeCZ });
+
+      for (let f = 1; f < floors; f++) {
+        const baseY = 0.25 + f * floorH;
+        addBox(g, bridgeW, 1.0, 0.22, MAT_OFFWHITE, { x: bridgeCX, y: baseY + 0.62, z: 5.62 });
+        addBox(g, bridgeW, 0.06, 0.06, MAT_DARK_GREY, { x: bridgeCX, y: baseY + 1.24, z: 5.62, castShadow: false });
+        for (const wx of [11.4, 15.0, 18.6]) {
+          addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, { x: wx, y: baseY + 2.0, z: 14.02, castShadow: false });
+        }
+        for (const wx of [15.0, 18.6]) {
+          addBox(g, 2.3, 1.4, 0.14, MAT_MED_GREY, { x: wx, y: baseY + 2.0, z: 7.78, castShadow: false });
+        }
+      }
+      for (const cx of [14.9, 18.6]) {
+        addBox(g, 0.44, floorH * 2, 0.44, MAT_WHITE, { x: cx, y: bridgeFloor2Y + floorH, z: 5.74 });
+      }
+      for (let f = 0; f < floors; f++) {
+        addBox(g, 2.2, 1.4, 0.14, MAT_MED_GREY, { x: 7.4, y: 0.25 + f * floorH + 2.0, z: 14.02, castShadow: false });
+      }
+      addBox(g, 0.14, 1.4, 2.2, MAT_MED_GREY, { x: 20.48, y: 0.25 + 2.0, z: 10.9, castShadow: false });
+
+      // Stepped entrance visor roofs over the 1st/2nd floor driveway portal bay facing the entrance plaza (+Z)
+      // (Upper-left porch pavilion removed to clear space for the blue-rectangle Wall Fountain per Edit 4!)
+      addArchMesh(g, createHippedRoofGeo(4.8, 2.2, 0.78, 1.35, 1.0), MAT_LIGHT_GREY, { x: 15.2, y: 3.65, z: 14.9 });
+      addArchMesh(g, createHippedRoofGeo(4.4, 1.8, 0.68, 1.25, 0.85), MAT_LIGHT_GREY, { x: 15.2, y: 7.12, z: 14.7 });
+
+      // --- CONTINUOUS HORIZONTAL TIERED ROOF VISORS (TOPI-TOPI) AROUND INNER COURTYARD ---
+      // Split cleanly at the two inner-courtyard switchback stairwell bays so stairwells stay unobstructed!
+      const innerMinX = 13.0, innerMaxX = 29.0;
+      const innerMinZ = -13.5, innerMaxZ = 5.5;
+      const innerCX = 21.0, innerCZ = -4.0;
+
+      for (const tierY of [3.25, 6.75]) {
+        // East inner face (Z = -9.5..+5.5, clear of Stairwell #2 at Z = -13.4..-9.6)
+        addArchMesh(g, createLeanToEaveGeo(15.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerMinX + 0.67, y: tierY, z: -2.0, ry: Math.PI / 2 });
+        // West inner face (full Z = -13.5..+5.5)
+        addArchMesh(g, createLeanToEaveGeo(19.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerMaxX - 0.67, y: tierY, z: innerCZ, ry: -Math.PI / 2 });
+        // North inner face (X = 13.0..25.0, clear of Stairwell #3 at X = 25.0..28.8)
+        addArchMesh(g, createLeanToEaveGeo(12.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: 19.0, y: tierY, z: innerMaxZ - 0.67, ry: Math.PI });
+        // South inner face (full X = 13.0..29.0)
+        addArchMesh(g, createLeanToEaveGeo(16.0, 1.35, 0.65), MAT_LIGHT_GREY, { x: innerCX, y: tierY, z: innerMinZ + 0.67, ry: 0 });
+      }
+
+      // --- WIDE CRISP HIPPED ROOFS (ATAP LIMASAN) WITH EXACT CORNER HIP MITERS OVER FULL EXTENDED RING ---
+      const roofY = totalH + 0.38;
+      // 1) East Wing wide hipped roof (north hip vertex at (8.75, 9.75))
+      addArchMesh(g, createHippedRoofGeo(11.0, 48.0, 3.85, 5.5, 5.5), MAT_LIGHT_GREY, { x: 8.75, y: roofY, z: -8.75 });
+      // 2) West Wing EXTENDED wide hipped roof (Z: -23.25..+25.75; exact hip vertices at (33.25, -17.75) & (33.25, +20.25))
+      addArchMesh(g, createHippedRoofGeo(11.0, 49.0, 3.85, 5.5, 5.5), MAT_LIGHT_GREY, { x: 33.25, y: roofY, z: 1.25 });
+      // 3) Continuous North Wing + 3rd-Floor Bridge pitched roof joining East & West ridges seamlessly
+      addArchMesh(g, createGableRoofGeo(24.5, 11.0, 3.83, 'x'), MAT_LIGHT_GREY, { x: 21.0, y: roofY, z: 9.75 });
+      // 4) Extended Front-Right L-Wrap Wing hipped roof (3.87m cleanly dominates front-right corner over West Wing 3.85m, zero coplanar z-fighting!)
+      addArchMesh(g, createHippedRoofGeo(19.5, 11.0, 3.87, 5.5, 5.5), MAT_LIGHT_GREY, { x: 29.0, y: roofY, z: 20.25 });
+      // 5) South Wing pitched roof joining East & West hip ridges seamlessly
+      addArchMesh(g, createGableRoofGeo(24.5, 11.0, 3.83, 'x'), MAT_LIGHT_GREY, { x: 21.0, y: roofY, z: -17.75 });
+
+      // --- CONJOINED 2ND-FLOOR MOSQUE (MASJID KHUNUZUL 'IBAD — SINGLE RIBBED DOME, ZERO MINARETS!) ---
+      // Integrated directly INTO the 2nd floor of Gedung A's rear (South) wing as a conjoined hall room
+      const mqGroup = new THREE.Group();
+      mqGroup.position.set(21.0, 0, -26.2); // Flush against South Wing rear wall (Z = -22.0 to -30.4)
+      const mqW = 11.2;
+      const mqD = 8.4;
+
+      // Ground-floor open colonnaded veranda / ablution base supporting the 2nd-floor mosque room
+      addBox(mqGroup, mqW + 0.4, 0.25, mqD + 0.3, MAT_LIGHT_GREY, { y: 0.125 });
+      addBox(mqGroup, mqW - 1.2, floorH - 0.1, mqD - 1.6, MAT_OFFWHITE, { y: 0.25 + (floorH - 0.1) / 2, z: 0.45 });
+      for (const cx of [-5.2, -2.6, 0, 2.6, 5.2]) {
+        addBox(mqGroup, 0.42, floorH, 0.42, MAT_WHITE, { x: cx, y: 0.25 + floorH / 2, z: -mqD / 2 + 0.24 });
+      }
+      for (const cz of [-1.6, 1.4]) {
+        addBox(mqGroup, 0.42, floorH, 0.42, MAT_WHITE, { x: -mqW / 2 + 0.24, y: 0.25 + floorH / 2, z: cz });
+        addBox(mqGroup, 0.42, floorH, 0.42, MAT_WHITE, { x: mqW / 2 - 0.24, y: 0.25 + floorH / 2, z: cz });
+      }
+
+      // 2nd-Floor Conjoined Mosque Prayer Hall (Y = 3.75 to 8.35, tied directly into Gedung A 2nd floor!)
+      const hallBaseY = 0.25 + floorH; // 3.75m
+      const hallH = 4.55;
+      addBox(mqGroup, mqW + 0.3, 0.26, mqD + 0.3, MAT_OFFWHITE, { y: hallBaseY });
+      addBox(mqGroup, mqW, hallH, mqD, MAT_WHITE, { y: hallBaseY + hallH / 2 });
+      // Stepped architectural roof parapet cornice crowning the 2nd-floor mosque room
+      addBox(mqGroup, mqW + 0.55, 0.42, mqD + 0.55, MAT_OFFWHITE, { y: hallBaseY + hallH + 0.21 });
+
+      // Rhythmic arched clerestory & tall mosque windows along South, East & West facades
+      for (let x = -3.6; x <= 3.6; x += 2.4) {
+        addBox(mqGroup, 1.35, 2.55, 0.14, MAT_LIGHT_GREY, { x, y: hallBaseY + 2.05, z: -mqD / 2 - 0.03, castShadow: false });
+        addBox(mqGroup, 1.15, 0.65, 0.14, MAT_MED_GREY, { x, y: hallBaseY + 3.85, z: -mqD / 2 - 0.03, castShadow: false });
+      }
+      for (const z of [-2.2, 0.6]) {
+        addBox(mqGroup, 0.14, 2.55, 1.65, MAT_LIGHT_GREY, { x: -mqW / 2 - 0.03, y: hallBaseY + 2.05, z, castShadow: false });
+        addBox(mqGroup, 0.14, 2.55, 1.65, MAT_LIGHT_GREY, { x: mqW / 2 + 0.03, y: hallBaseY + 2.05, z, castShadow: false });
+      }
+      // Subtle projecting Qibla mihrab bay on West (+X) side of the 2nd-floor mosque
+      addBox(mqGroup, 1.0, 3.6, 2.8, MAT_OFFWHITE, { x: mqW / 2 + 0.48, y: hallBaseY + 1.9, z: -0.8 });
+      addArchMesh(mqGroup, createHippedRoofGeo(1.25, 3.1, 0.65, 0.45, 0.65), MAT_LIGHT_GREY, {
+        x: mqW / 2 + 0.48, y: hallBaseY + 3.7, z: -0.8,
+      });
+
+      // SINGLE Sculpted 16-Ribbed Dome (Kubah) centered clear of the South Wing roof eave!
+      const domeSub = new THREE.Group();
+      domeSub.position.set(0, 0, -0.85); // World Z = -27.05 -> 0.90m clear south of South Wing eave (Z = -23.25)
+      const domeBaseY = hallBaseY + hallH + 0.42; // 8.72m
+      addArchMesh(domeSub, new THREE.CylinderGeometry(2.75, 2.90, 0.92, 8), MAT_OFFWHITE, { y: domeBaseY + 0.46, edgeAngle: 15 });
+      addArchMesh(domeSub, new THREE.CylinderGeometry(2.68, 2.80, 0.26, 16), MAT_LIGHT_GREY, { y: domeBaseY + 1.04, edgeAngle: 15 });
+
+      const domePts = [];
+      const domeH = 3.35;
+      const domeR = 2.65;
+      const segs = 16;
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs;
+        const theta = t * (Math.PI / 2);
+        const r = Math.max(0.02, domeR * Math.cos(theta) * (1 + 0.08 * Math.sin(theta * 2)));
+        const y = domeH * Math.sin(theta) * (1 + 0.14 * Math.pow(t, 2.2));
+        domePts.push(new THREE.Vector2(r, y));
+      }
+      addArchMesh(domeSub, new THREE.LatheGeometry(domePts, 16), MAT_WHITE, { y: domeBaseY + 1.16, edgeAngle: 12 });
+      for (let r = 0; r < 16; r++) {
+        const angle = (r / 16) * Math.PI * 2;
+        const curvePts = domePts.map((p) =>
+          new THREE.Vector3(Math.cos(angle) * (p.x + 0.05), p.y, Math.sin(angle) * (p.x + 0.05))
+        );
+        const ribGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curvePts), 12, 0.055, 4, false);
+        addArchMesh(domeSub, ribGeo, MAT_LIGHT_GREY, { y: domeBaseY + 1.16, edgeAngle: 22 });
+      }
+      // Single finial spire & crescent crown
+      const spireBase = domeBaseY + 1.16 + domeH * 1.14;
+      addArchMesh(domeSub, new THREE.CylinderGeometry(0.10, 0.26, 0.40, 8), MAT_OFFWHITE, { y: spireBase + 0.14, edgeAngle: 18 });
+      addArchMesh(domeSub, new THREE.CylinderGeometry(0.035, 0.05, 1.12, 8), MAT_GATE_BLACK, { y: spireBase + 0.82, edgeAngle: 25 });
+      addArchMesh(domeSub, new THREE.SphereGeometry(0.15, 8, 6), MAT_WHITE, { y: spireBase + 0.56, edgeAngle: 20 });
+      addArchMesh(domeSub, new THREE.TorusGeometry(0.21, 0.036, 6, 14, Math.PI * 1.45), MAT_GATE_BLACK, {
+        y: spireBase + 1.45, rz: Math.PI * 0.25, edgeAngle: 20,
+      });
+      mqGroup.add(domeSub);
+
+      g.add(mqGroup);
+
+      // --- EXTERIOR MULTI-FLIGHT STAIRCASE ON WEST WING ---
+      const addExteriorStair = (x, z, rotY = 0) => {
+        const sg = new THREE.Group();
+        sg.position.set(x, 0.25, z);
+        sg.rotation.y = rotY;
+        for (let f = 0; f < 2; f++) {
+          const base = f * floorH;
+          for (let s = 0; s < 8; s++) {
+            addBox(sg, 1.4, 0.22, 0.38, MAT_WHITE, { x: 0, y: base + 0.22 + s * 0.42, z: -1.4 + s * 0.38 });
+          }
+          addBox(sg, 1.6, 0.24, 1.2, MAT_LIGHT_GREY, { x: 0, y: base + 1.85, z: 1.8 });
+        }
+        addBox(sg, 2.0, 0.18, 4.4, MAT_OFFWHITE, { x: 0, y: totalH - 0.1, z: 0.2 });
+        g.add(sg);
+      };
+      addExteriorStair(38.4, 1.0, 0);
+
+      // --- ENCLOSED INNER COURTYARD (LAPANGAN DALAM) ---
+      addBox(g, 15.8, 0.05, 18.8, MAT_LIGHT_GREY, {
+        x: innerCX, y: 0.025, z: innerCZ,
+        castShadow: false, receiveShadow: true,
+      });
+
+      const cly = 0.065;
+      const cPts = [];
+      const addCSeg = (x1, z1, x2, z2) => cPts.push(new THREE.Vector3(x1, cly, z1), new THREE.Vector3(x2, cly, z2));
+      const addCArc = (cx, cz, r, steps = 28) => {
+        for (let i = 0; i < steps; i++) {
+          const a0 = (i / steps) * Math.PI * 2;
+          const a1 = ((i + 1) / steps) * Math.PI * 2;
+          addCSeg(cx + Math.cos(a0) * r, cz + Math.sin(a0) * r, cx + Math.cos(a1) * r, cz + Math.sin(a1) * r);
+        }
+      };
+      addCSeg(14.8, -11.5, 27.2, -11.5);
+      addCSeg(27.2, -11.5, 27.2, 3.5);
+      addCSeg(27.2, 3.5, 14.8, 3.5);
+      addCSeg(14.8, 3.5, 14.8, -11.5);
+      addCSeg(14.8, -4.0, 27.2, -4.0);
+      addCArc(21.0, -4.0, 1.65);
+      addCArc(21.0, 1.2, 1.35);
+      addCArc(21.0, -9.2, 1.35);
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cPts), LINE_COURT));
+
+      for (const z of [-10.0, -4.0, 2.0]) {
+        addBox(g, 1.0, 0.45, 4.4, MAT_OFFWHITE, { x: 13.7, y: 0.225, z });
+        addBox(g, 1.0, 0.45, 4.4, MAT_OFFWHITE, { x: 28.3, y: 0.225, z });
+      }
+      addBox(g, 4.6, 0.45, 1.0, MAT_OFFWHITE, { x: 17.2, y: 0.225, z: -12.8 });
+      addBox(g, 4.6, 0.45, 1.0, MAT_OFFWHITE, { x: 24.8, y: 0.225, z: -12.8 });
+
+      addBox(g, 2.8, 0.08, 0.08, MAT_WHITE, { x: 24.75, y: 1.85, z: 4.3 });
+      addBox(g, 0.08, 1.85, 0.08, MAT_WHITE, { x: 23.35, y: 0.925, z: 4.3 });
+      addBox(g, 0.08, 1.85, 0.08, MAT_WHITE, { x: 26.15, y: 0.925, z: 4.3 });
+      addBox(g, 1.6, 1.0, 0.08, MAT_WHITE, { x: 24.75, y: 3.15, z: 4.6 });
+      addArchMesh(g, new THREE.CylinderGeometry(0.035, 0.065, 9.6, 8), MAT_WHITE, { x: 14.6, y: 4.8, z: 1.8, edgeAngle: 30 });
+
+      campus.add(g);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5H. RELOCATED REAR GARDEN (BEHIND GEDUNG B), STORAGE SHED SLOT & REAR WALL FOUNTAIN (Edit 5)
+    // -------------------------------------------------------------------------
+    function buildRearGarden() {
+      const g = registerEditable('rear-garden', 'Rear Greenhouse Garden & Shed', new THREE.Group());
+
+      // Clean middle rear courtyard apron behind the back covered breezeway (X: -10.8..+4.2, Z: -34.8..-20.2)
+      addBox(g, 14.8, 0.04, 14.6, MAT_WHITE, {
+        x: -3.3, y: 0.02, z: -27.5,
+        castShadow: false, receiveShadow: true,
+      });
+
+      // 1) REAR GARDEN BEHIND GEDUNG B (X = -37.2..-21.6, Z = -34.8..-25.8)
+      //    Two Greenhouse Beds stay in place laterally; vacated gazebo corner left as open tiled patio!
+      const gardenCX = -29.4;
+      const gardenCZ = -30.3;
+      const gardenW = 15.6;
+      const gardenD = 9.0;
+      addBox(g, gardenW, 0.06, gardenD, MAT_WHITE, {
+        x: gardenCX, y: 0.03, z: gardenCZ,
+        castShadow: false, receiveShadow: true,
+      });
+      // Clean architectural courtyard tile grid lines across rear garden pad
+      const gTilePts = [];
+      for (let x = gardenCX - gardenW / 2 + 1.4; x < gardenCX + gardenW / 2; x += 1.4) {
+        gTilePts.push(new THREE.Vector3(x, 0.068, gardenCZ - gardenD / 2 + 0.05), new THREE.Vector3(x, 0.068, gardenCZ + gardenD / 2 - 0.05));
+      }
+      for (let z = gardenCZ - gardenD / 2 + 1.4; z < gardenCZ + gardenD / 2; z += 1.4) {
+        gTilePts.push(new THREE.Vector3(gardenCX - gardenW / 2 + 0.05, 0.068, z), new THREE.Vector3(gardenCX + gardenW / 2 - 0.05, 0.068, z));
+      }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(gTilePts), LINE_SUBTLE));
+
+      // Two neatly bordered rectangular greenhouse / raised planting beds separated by central stepping-stone path
+      const buildGreenhouseBed = (cx, cz) => {
+        const bg = new THREE.Group();
+        bg.position.set(cx, 0.04, cz);
+        const bw = 2.45;
+        const bd = 7.4;
+        addBox(bg, bw, 0.36, bd, MAT_OFFWHITE, { y: 0.18 });
+        addBox(bg, bw - 0.34, 0.10, bd - 0.34, MAT_LIGHT_GREY, { y: 0.35, castShadow: false });
+        const rowPts = [];
+        for (let z = -bd / 2 + 0.52; z <= bd / 2 - 0.52; z += 0.68) {
+          rowPts.push(new THREE.Vector3(-bw / 2 + 0.25, 0.42, z), new THREE.Vector3(bw / 2 - 0.25, 0.42, z));
+        }
+        bg.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(rowPts), LINE_SUBTLE));
+        for (let z = -bd / 2 + 0.4; z <= bd / 2 - 0.3; z += 1.65) {
+          addBox(bg, 0.06, 1.35, 0.06, MAT_MED_GREY, { x: -bw / 2 + 0.12, y: 1.02, z, castShadow: false });
+          addBox(bg, 0.06, 1.35, 0.06, MAT_MED_GREY, { x: bw / 2 - 0.12, y: 1.02, z, castShadow: false });
+          addBox(bg, bw - 0.2, 0.06, 0.06, MAT_MED_GREY, { y: 1.72, z, castShadow: false });
+        }
+        addBox(bg, 0.07, 0.07, bd - 0.6, MAT_MED_GREY, { y: 1.95, castShadow: false });
+        addArchMesh(bg, createGableRoofGeo(bw - 0.22, bd - 0.6, 0.35, 'z'), MAT_WHITE, {
+          y: 1.72, castShadow: true, receiveShadow: true, edgeAngle: 18,
+        });
+        g.add(bg);
+      };
+      buildGreenhouseBed(-34.6, -30.3);
+      buildGreenhouseBed(-30.9, -30.3);
+
+      // Central Stepping-Stone Path between the two greenhouse beds
+      for (let z = -26.4; z >= -34.2; z -= 0.86) {
+        addBox(g, 0.78, 0.08, 0.48, MAT_OFFWHITE, { x: -32.75, y: 0.08, z, castShadow: false });
+      }
+
+      // 2) VERTICAL STORAGE SHED (GUDANG) IN SLOT DIRECTLY LEFT OF GARDEN SQUARE (X = -17.4, Z = -31.1)
+      const gdX = -17.4;
+      const gdZ = -31.1;
+      addBox(g, 4.2, 0.20, 6.8, MAT_LIGHT_GREY, { x: gdX, y: 0.10, z: gdZ });
+      addBox(g, 3.7, 2.65, 6.3, MAT_WHITE, { x: gdX, y: 1.525, z: gdZ });
+      // Crisp mono-pitch overhanging roof slab sloping cleanly toward +X
+      addArchMesh(g, createLeanToEaveGeo(7.0, 4.5, 0.55, 0.14), MAT_LIGHT_GREY, { x: gdX, y: 2.78, z: gdZ, ry: Math.PI / 2 });
+      // Recessed entry door & high ventilation louver strip facing open rear courtyard (+X)
+      addBox(g, 0.10, 2.05, 0.98, MAT_DARK_GREY, { x: gdX + 1.87, y: 1.22, z: gdZ + 1.3, castShadow: false });
+      addBox(g, 0.10, 0.42, 2.5, MAT_MED_GREY, { x: gdX + 1.87, y: 2.35, z: gdZ - 1.2, castShadow: false });
+
+      // 3) REAR WALL-MOUNTED FOUNTAIN ATTACHED FLUSH AGAINST SHORTENED REAR WALL (X = +8.5, Z = -34.98)
+      const rwfX = 8.5;
+      const rwfWallZ = -34.98;
+      // Masonry wall-mounted fountain backplate attached flush against the rear perimeter wall
+      addBox(g, 3.4, 2.15, 0.34, MAT_OFFWHITE, { x: rwfX, y: 1.075, z: rwfWallZ + 0.17 });
+      addBox(g, 3.6, 0.14, 0.44, MAT_WHITE, { x: rwfX, y: 2.22, z: rwfWallZ + 0.22 });
+      // Projecting cantilevered water spout & fluted wall ribs
+      addBox(g, 1.8, 0.16, 0.54, MAT_WHITE, { x: rwfX, y: 1.48, z: rwfWallZ + 0.48 });
+      for (let rx = rwfX - 1.2; rx <= rwfX + 1.2; rx += 0.40) {
+        addBox(g, 0.08, 1.65, 0.08, MAT_LIGHT_GREY, { x: rx, y: 1.15, z: rwfWallZ + 0.36, castShadow: false });
+      }
+      // Compact projecting basin hugging the shortened rear perimeter wall (clean ~1.45m walkway to East Wing)
+      addBox(g, 3.9, 0.38, 1.95, MAT_WHITE, { x: rwfX, y: 0.19, z: rwfWallZ + 1.08 });
+      addBox(g, 3.35, 0.26, 1.45, MAT_LIGHT_GREY, { x: rwfX, y: 0.26, z: rwfWallZ + 1.08, castShadow: false });
+      const rwfPts = [];
+      for (let cx = rwfX - 0.72; cx <= rwfX + 0.72; cx += 0.24) {
+        rwfPts.push(new THREE.Vector3(cx, 1.46, rwfWallZ + 0.72), new THREE.Vector3(cx, 0.40, rwfWallZ + 0.84));
+      }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(rwfPts), LINE_SUBTLE));
+      // Flanking low corner planter plinths next to wall fountain
+      addBox(g, 1.0, 0.46, 1.05, MAT_OFFWHITE, { x: rwfX - 2.55, y: 0.23, z: rwfWallZ + 0.60 });
+      addBox(g, 1.0, 0.46, 1.05, MAT_OFFWHITE, { x: rwfX + 2.55, y: 0.23, z: rwfWallZ + 0.60 });
+
+      campus.add(g);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5H-2. STANDALONE RELOCATED REAR COURTYARD GAZEBO (BESIDE GEDUNG A EAST WING)
+    // -------------------------------------------------------------------------
+    function buildRearGazebo() {
+      const gzGroup = registerEditable('rear-gazebo', 'Rear Courtyard Gazebo', new THREE.Group());
+      // Positioned cleanly beside Gedung A East Wing's -X outer wall (eave at X=2.85), steps opening -X toward courtyard
+      const gx = 0.15;
+      const gz = -28.8;
+      addBox(gzGroup, 4.1, 0.32, 4.1, MAT_OFFWHITE, { x: gx, y: 0.20, z: gz });
+      // Wide courtyard-facing entrance step on the open -X side
+      addBox(gzGroup, 0.65, 0.16, 1.85, MAT_WHITE, { x: gx - 2.35, y: 0.12, z: gz });
+      for (const sx of [-1.75, 1.75]) {
+        for (const sz of [-1.75, 1.75]) {
+          addBox(gzGroup, 0.22, 2.45, 0.22, MAT_WHITE, { x: gx + sx, y: 1.56, z: gz + sz });
+        }
+      }
+      // Three perimeter benches (-Z, +Z, +X against Gedung A), leaving -X open to the rear courtyard
+      addBox(gzGroup, 3.6, 0.16, 0.45, MAT_WHITE, { x: gx, y: 0.69, z: gz - 1.65 });
+      addBox(gzGroup, 3.6, 0.16, 0.45, MAT_WHITE, { x: gx, y: 0.69, z: gz + 1.65 });
+      addBox(gzGroup, 0.45, 0.16, 3.3, MAT_WHITE, { x: gx + 1.65, y: 0.69, z: gz });
+      addBox(gzGroup, 3.9, 0.18, 3.9, MAT_OFFWHITE, { x: gx, y: 2.82, z: gz });
+      addArchMesh(gzGroup, createHippedRoofGeo(4.95, 4.95, 1.65, 2.38, 2.38), MAT_LIGHT_GREY, { x: gx, y: 2.90, z: gz });
+
+      campus.add(gzGroup);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5I. MONOCHROME ARCHITECTURAL SCALE-MODEL TREES & SHRUB CLUSTERS
+    // -------------------------------------------------------------------------
+    function buildMaquetteTrees() {
+      const treeGroup = new THREE.Group();
+
+      const addTree = (x, z, scale = 1.0) => {
+        const tg = new THREE.Group();
+        tg.position.set(x, 0.02, z);
+        addArchMesh(tg, new THREE.CylinderGeometry(0.11 * scale, 0.17 * scale, 2.1 * scale, 6), MAT_LIGHT_GREY, {
+          y: 1.05 * scale, edgeAngle: 25,
+        });
+        addArchMesh(tg, new THREE.IcosahedronGeometry(1.45 * scale, 0), MAT_WHITE, {
+          y: 2.95 * scale, ry: x * 0.7, edgeAngle: 20,
+        });
+        addArchMesh(tg, new THREE.IcosahedronGeometry(1.05 * scale, 0), MAT_OFFWHITE, {
+          x: 0.55 * scale, y: 2.55 * scale, z: 0.35 * scale, ry: z * 0.5, edgeAngle: 20,
+        });
+        addArchMesh(tg, new THREE.IcosahedronGeometry(0.95 * scale, 0), MAT_OFFWHITE, {
+          x: -0.52 * scale, y: 2.68 * scale, z: -0.32 * scale, ry: (x + z) * 0.4, edgeAngle: 20,
+        });
+        treeGroup.add(tg);
+      };
+
+      const addFoliageCluster = (x, z, scale = 1.0) => {
+        const fg = new THREE.Group();
+        fg.position.set(x, 0.02, z);
+        addArchMesh(fg, new THREE.IcosahedronGeometry(1.12 * scale, 0), MAT_OFFWHITE, {
+          y: 0.78 * scale, ry: (x - z) * 0.6, edgeAngle: 20,
+        });
+        addArchMesh(fg, new THREE.IcosahedronGeometry(0.84 * scale, 0), MAT_WHITE, {
+          x: 0.68 * scale, y: 0.58 * scale, z: 0.42 * scale, ry: x * 0.9, edgeAngle: 20,
+        });
+        addArchMesh(fg, new THREE.IcosahedronGeometry(0.74 * scale, 0), MAT_LIGHT_GREY, {
+          x: -0.58 * scale, y: 0.52 * scale, z: -0.36 * scale, ry: z * 0.7, edgeAngle: 20,
+        });
+        treeGroup.add(fg);
+      };
+
+      const placements = [
+        // Dense bottom-front foliage along low road curb & front of Extended Front-Right Wing (Z >= 31.8, clear of Extended Wing!)
+        [2.2, 34.4, 1.35], [6.6, 34.6, 1.42], [11.6, 34.4, 1.32], [16.8, 34.2, 1.40], [22.4, 33.6, 1.35],
+        [27.6, 32.8, 1.32], [32.8, 32.6, 1.25], [37.4, 31.8, 1.18],
+        [2.6, 39.4, 1.28], [7.8, 39.8, 1.35], [13.2, 39.5, 1.30], [18.8, 39.4, 1.25], [24.6, 38.6, 1.22],
+        // Tree strip neatly aligned behind the curved border curb & concrete drainage channel (Edit 2!)
+        [0.45, 9.2, 1.24], [0.45, 3.0, 1.22], [0.45, -3.2, 1.18], [0.45, -9.8, 1.12],
+        // South court strip & rear courtyard perimeter (blocking tree shifted cleanly aside from relocated gazebo!)
+        [-14.5, -14.8, 0.92], [-6.2, -15.4, 0.98], [-0.5, -15.2, 0.90],
+        [1.8, -22.4, 0.96], [-3.4, -32.8, 1.02], [-11.2, -32.6, 1.00],
+        // Inner courtyard planter trees
+        [14.2, -9.2, 0.62], [27.8, -10.2, 0.68], [14.2, 2.2, 0.65],
+        // Rear perimeter greenery inside shortened rear wall (Z = -35.2) behind Mosque & flanking garden
+        [14.6, -33.0, 1.02], [32.5, -32.2, 1.15], [37.2, -32.4, 1.10],
+        [-36.8, -26.2, 0.92],
+      ];
+      for (const [tx, tz, ts] of placements) {
+        addTree(tx, tz, ts);
+      }
+
+      const shrubClusters = [
+        [1.2, 32.8, 1.05], [4.6, 33.2, 1.12], [9.2, 33.0, 1.08], [14.4, 33.0, 1.12], [19.6, 32.8, 1.08],
+        [24.8, 30.2, 1.05], [30.2, 30.2, 1.05], [35.4, 30.0, 1.00],
+        [5.2, 37.2, 1.15], [10.4, 37.4, 1.12], [16.2, 37.2, 1.10], [26.8, 36.2, 1.02],
+        // Rear garden corner shrubs framing the open tiled patio behind Gedung B (inside Z = -34.8)
+        [-22.8, -27.2, 0.78], [-22.8, -33.4, 0.80],
+      ];
+      for (const [fx, fz, fs] of shrubClusters) {
+        addFoliageCluster(fx, fz, fs);
+      }
+
+      campus.add(treeGroup);
+    }
+
+    // Build all architectural zones
+    buildSiteAndRoad();
+    buildFrontGateAndCanopy();
+    buildSignWall();
+    buildSecondGateAndPlaza();
+    buildGedungB();
+    buildMainCourt();
+    buildGedungA();
+    buildRearGarden();
+    buildRearGazebo();
+    buildMaquetteTrees();
+
+    // Center each editable group's local origin on its XZ centroid so TransformControls gizmos attach directly onto the building!
+    (function centerEditableOrigins() {
+      const box = new THREE.Box3();
+      const center = new THREE.Vector3();
+      editableEntries.forEach((entry) => {
+        entry.group.updateMatrixWorld(true);
+        box.setFromObject(entry.group);
+        if (!box.isEmpty()) {
+          box.getCenter(center);
+          for (const child of entry.group.children) {
+            child.position.x -= center.x;
+            child.position.z -= center.z;
+          }
+          entry.group.position.set(center.x, 0, center.z);
+          entry.initialPos.copy(entry.group.position);
+        }
+      });
+    })();
+
+    // =========================================================================
+    // 6. DUAL CAMERAS (PERSPECTIVE <-> ORTHOGRAPHIC), ORBITCONTROLS & PRESETS
+    // =========================================================================
+    const aspect0 = window.innerWidth / window.innerHeight;
+    const perspCamera = new THREE.PerspectiveCamera(42, aspect0, 0.5, 800);
+    const orthoCamera = new THREE.OrthographicCamera(-55 * aspect0, 55 * aspect0, 55, -55, -300, 800);
+
+    let activeCamera = perspCamera;
+    let projectionMode = 'perspective';
+
+    const controls = new OrbitControls(activeCamera, renderer.domElement);
+    controls.enableDamping = !isSoftwareGl;
+    controls.dampingFactor = 0.075;
+    controls.maxPolarAngle = Math.PI / 2 - 0.015;
+    controls.minDistance = 8;
+    controls.maxDistance = 260;
+    controls.screenSpacePanning = true;
+
+    const DEG2RAD = Math.PI / 180;
+    const RAD2DEG = 180 / Math.PI;
+
+    // Camera presets carefully framed so EVERY angle (including Top-Down Plan View) fits cleanly without clipping
+    const PRESETS = {
+      isometric: {
+        target: new THREE.Vector3(0.5, 1.5, 2.5),
+        azimuth: 332,
+        elevation: 36,
+        distance: 124,
+        fov: 42,
+      },
+      entrance: {
+        // Eye-level Jl. Bango III view showing Front Gate + White L-Canopy, Front-Left Yard Shed,
+        // "SMA NEGERI 66 JAKARTA" Sign Wall directly joined at 90° to the Recessed Second Gate,
+        // Security Post, low bottom-right street curb + trees, and Gedung A skybridge behind!
+        target: new THREE.Vector3(-6.2, 2.7, 23.2),
+        azimuth: 336,
+        elevation: 13,
+        distance: 31.0,
+        fov: 50,
+      },
+      courtyard: {
+        // Looking South along the Main Basketball Court, White L-Canopy, Gedung A visors & Rear Garden Gazebo
+        target: new THREE.Vector3(-8.5, 3.2, -14.0),
+        azimuth: 356,
+        elevation: 15,
+        distance: 36.0,
+        fov: 48,
+      },
+      plan: {
+        // Properly zoomed Top-Down Plan View framing the ENTIRE campus plinth cleanly above the bottom dock!
+        target: new THREE.Vector3(1.0, 0.0, 2.5),
+        azimuth: 0,
+        elevation: 89.5,
+        distance: 168,
+        fov: 42,
+      },
+    };
+
+    function sphericalToOffset(azimuthDeg, elevationDeg, radius, out) {
+      const clampedElev = Math.min(89.8, Math.max(2, elevationDeg));
+      const az = azimuthDeg * DEG2RAD;
+      const el = clampedElev * DEG2RAD;
+      const cosEl = Math.cos(el);
+      out.set(
+        radius * cosEl * Math.sin(az),
+        radius * Math.sin(el),
+        radius * cosEl * Math.cos(az)
+      );
+      return out;
+    }
+
+    function offsetToSpherical(offset) {
+      const radius = offset.length();
+      if (radius < 1e-5) return { azimuth: 0, elevation: 45, radius: 1 };
+      const elevation = Math.asin(THREE.MathUtils.clamp(offset.y / radius, -1, 1)) * RAD2DEG;
+      let azimuth = Math.atan2(offset.x, offset.z) * RAD2DEG;
+      if (azimuth < 0) azimuth += 360;
+      return { azimuth, elevation, radius };
+    }
+
+    function syncOrthoFrustumFromDistance(distance) {
+      const aspect = window.innerWidth / window.innerHeight;
+      const halfH = Math.max(2, distance * Math.tan((perspCamera.fov * DEG2RAD) / 2));
+      const halfW = halfH * aspect;
+      orthoCamera.left = -halfW;
+      orthoCamera.right = halfW;
+      orthoCamera.top = halfH;
+      orthoCamera.bottom = -halfH;
+      orthoCamera.zoom = 1;
+      orthoCamera.updateProjectionMatrix();
+    }
+
+    const transition = {
+      active: false,
+      targetPos: new THREE.Vector3(),
+      targetLook: new THREE.Vector3(),
+      targetFov: 42,
+      targetOrthoHalfH: 45,
+    };
+
+    const _offset = new THREE.Vector3();
+    let isUpdatingSliders = false;
+
+    const sliderFov = document.getElementById('slider-fov');
+    const sliderAz = document.getElementById('slider-azimuth');
+    const sliderEl = document.getElementById('slider-elevation');
+    const valFov = document.getElementById('val-fov');
+    const valAz = document.getElementById('val-azimuth');
+    const valEl = document.getElementById('val-elevation');
+    const fovWrapper = document.getElementById('fov-wrapper');
+    const btnPersp = document.getElementById('proj-perspective');
+    const btnOrtho = document.getElementById('proj-orthographic');
+    const presetButtons = Array.from(document.querySelectorAll('.preset-btn'));
+    const controlsBtn = document.getElementById('controls-btn');
+    const controlsCloseBtn = document.getElementById('controls-close-btn');
+    const toggleUiBtn = document.getElementById('toggle-ui-btn');
+    const downloadBtn = document.getElementById('download-btn');
+
+    // =========================================================================
+    // 7. INTERACTIVE SCENE LAYOUT EDITOR (TransformControls + COORDINATES + JSON)
+    // =========================================================================
+    const transformControls = new TransformControls(activeCamera, renderer.domElement);
+    transformControls.setSize(0.85);
+    const gizmoHelper = transformControls.getHelper();
+    gizmoHelper.visible = false;
+    scene.add(gizmoHelper);
+
+    let editorOpen = false;
+    let selectedEntry = editableEntries[0] || null;
+    let isSyncingEditor = false;
+
+    const editLayoutBtn = document.getElementById('edit-layout-btn');
+    const editorSelect = document.getElementById('editor-select');
+    const editorModeBtns = Array.from(document.querySelectorAll('.editor-modes button'));
+    const edX = document.getElementById('ed-x');
+    const edY = document.getElementById('ed-y');
+    const edZ = document.getElementById('ed-z');
+    const edRy = document.getElementById('ed-ry');
+    const edXVal = document.getElementById('ed-x-val');
+    const edYVal = document.getElementById('ed-y-val');
+    const edZVal = document.getElementById('ed-z-val');
+    const edRyVal = document.getElementById('ed-ry-val');
+    const edResetOne = document.getElementById('ed-reset-one');
+    const edResetAll = document.getElementById('ed-reset-all');
+    const edExportJson = document.getElementById('ed-export-json');
+
+    editableEntries.forEach((entry) => {
+      const opt = document.createElement('option');
+      opt.value = entry.id;
+      opt.textContent = entry.label;
+      editorSelect.appendChild(opt);
+    });
+
+    function syncEditorSlidersFromSelected() {
+      if (!selectedEntry) return;
+      isSyncingEditor = true;
+      const dx = selectedEntry.group.position.x - selectedEntry.initialPos.x;
+      const dy = selectedEntry.group.position.y - selectedEntry.initialPos.y;
+      const dz = selectedEntry.group.position.z - selectedEntry.initialPos.z;
+      const rDeg = Math.round(selectedEntry.group.rotation.y * RAD2DEG);
+      edX.value = String(THREE.MathUtils.clamp(dx, -25, 25));
+      edY.value = String(THREE.MathUtils.clamp(dy, -5, 10));
+      edZ.value = String(THREE.MathUtils.clamp(dz, -25, 25));
+      edRy.value = String(THREE.MathUtils.clamp(rDeg, -180, 180));
+      edXVal.textContent = `${dx.toFixed(1)} m`;
+      edYVal.textContent = `${dy.toFixed(1)} m`;
+      edZVal.textContent = `${dz.toFixed(1)} m`;
+      edRyVal.textContent = `${rDeg}°`;
+      isSyncingEditor = false;
+    }
+
+    function selectEditableById(id) {
+      const entry = editableEntries.find((e) => e.id === id);
+      if (!entry) return;
+      selectedEntry = entry;
+      editorSelect.value = entry.id;
+      if (editorOpen) {
+        transformControls.attach(entry.group);
+        gizmoHelper.visible = true;
+      }
+      syncEditorSlidersFromSelected();
+      requestRender();
+    }
+
+    function setEditorOpen(open) {
+      editorOpen = open;
+      document.body.classList.toggle('editor-open', open);
+      document.body.dataset.editor = open ? 'open' : 'closed';
+      editLayoutBtn.classList.toggle('active', open);
+      editLayoutBtn.setAttribute('aria-pressed', String(open));
+      if (open && selectedEntry) {
+        transformControls.attach(selectedEntry.group);
+        gizmoHelper.visible = true;
+        syncEditorSlidersFromSelected();
+      } else {
+        transformControls.detach();
+        gizmoHelper.visible = false;
+      }
+      requestRender();
+    }
+
+    editLayoutBtn.addEventListener('click', () => setEditorOpen(!editorOpen));
+    editorSelect.addEventListener('change', () => selectEditableById(editorSelect.value));
+
+    editorModeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        transformControls.setMode(mode);
+        editorModeBtns.forEach((b) => b.classList.toggle('active', b === btn));
+        requestRender();
+      });
+    });
+
+    function applyEditorSlidersToSelected() {
+      if (isSyncingEditor || !selectedEntry) return;
+      const dx = Number(edX.value);
+      const dy = Number(edY.value);
+      const dz = Number(edZ.value);
+      selectedEntry.group.position.set(
+        selectedEntry.initialPos.x + dx,
+        selectedEntry.initialPos.y + dy,
+        selectedEntry.initialPos.z + dz
+      );
+      selectedEntry.group.rotation.y = Number(edRy.value) * DEG2RAD;
+      edXVal.textContent = `${dx.toFixed(1)} m`;
+      edYVal.textContent = `${dy.toFixed(1)} m`;
+      edZVal.textContent = `${dz.toFixed(1)} m`;
+      edRyVal.textContent = `${Number(edRy.value)}°`;
+      requestRender();
+    }
+    [edX, edY, edZ, edRy].forEach((el) => el.addEventListener('input', applyEditorSlidersToSelected));
+
+    edResetOne.addEventListener('click', () => {
+      if (!selectedEntry) return;
+      selectedEntry.group.position.copy(selectedEntry.initialPos);
+      selectedEntry.group.rotation.copy(selectedEntry.initialRot);
+      selectedEntry.group.scale.copy(selectedEntry.initialScale);
+      syncEditorSlidersFromSelected();
+      requestRender();
+    });
+
+    edResetAll.addEventListener('click', () => {
+      editableEntries.forEach((entry) => {
+        entry.group.position.copy(entry.initialPos);
+        entry.group.rotation.copy(entry.initialRot);
+        entry.group.scale.copy(entry.initialScale);
+      });
+      syncEditorSlidersFromSelected();
+      requestRender();
+    });
+
+    edExportJson.addEventListener('click', () => {
+      const payload = {
+        campus: 'SMA Negeri 66 Jakarta',
+        units: 'meters',
+        exportedAt: new Date().toISOString(),
+        elements: editableEntries.map((e) => ({
+          id: e.id,
+          label: e.label,
+          position: {
+            x: Number(e.group.position.x.toFixed(3)),
+            y: Number(e.group.position.y.toFixed(3)),
+            z: Number(e.group.position.z.toFixed(3)),
+          },
+          rotationDeg: {
+            x: Number((e.group.rotation.x * RAD2DEG).toFixed(2)),
+            y: Number((e.group.rotation.y * RAD2DEG).toFixed(2)),
+            z: Number((e.group.rotation.z * RAD2DEG).toFixed(2)),
+          },
+          scale: {
+            x: Number(e.group.scale.x.toFixed(3)),
+            y: Number(e.group.scale.y.toFixed(3)),
+            z: Number(e.group.scale.z.toFixed(3)),
+          },
+        })),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sman66-jakarta-layout.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    transformControls.addEventListener('dragging-changed', (ev) => {
+      controls.enabled = !ev.value;
+      requestRender();
+    });
+    transformControls.addEventListener('objectChange', () => {
+      syncEditorSlidersFromSelected();
+      requestRender();
+    });
+
+    // Click-to-select architectural element in 3D canvas while Edit Layout is open
+    const raycaster = new THREE.Raycaster();
+    const pointerNdc = new THREE.Vector2();
+    let pointerDownPos = null;
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (!editorOpen || !pointerDownPos || transformControls.dragging) return;
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 5) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointerNdc, activeCamera);
+      const hits = raycaster.intersectObjects(editableEntries.map((entry) => entry.group), true);
+      if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj && !obj.userData.editableId) obj = obj.parent;
+        if (obj && obj.userData.editableId) {
+          selectEditableById(obj.userData.editableId);
+        }
+      }
+    });
+
+    // =========================================================================
+    // 8. CAMERA CONTROLS, PROJECTION SWITCHING, UI TOGGLES & PNG EXPORT
+    // =========================================================================
+    function syncSlidersFromCamera() {
+      isUpdatingSliders = true;
+      _offset.copy(activeCamera.position).sub(controls.target);
+      const { azimuth, elevation } = offsetToSpherical(_offset);
+      const azRound = Math.round(azimuth) % 360;
+      const elRound = Math.round(THREE.MathUtils.clamp(elevation, 5, 90));
+      const fovRound = Math.round(perspCamera.fov);
+
+      sliderAz.value = String(azRound);
+      valAz.textContent = `${azRound}°`;
+      sliderEl.value = String(elRound);
+      valEl.textContent = `${elRound}°`;
+      sliderFov.value = String(fovRound);
+      valFov.textContent = `${fovRound}°`;
+      isUpdatingSliders = false;
+    }
+
+    function applyCameraImmediate(preset) {
+      transition.active = false;
+      controls.target.copy(preset.target);
+      perspCamera.fov = preset.fov;
+      perspCamera.updateProjectionMatrix();
+
+      sphericalToOffset(preset.azimuth, preset.elevation, preset.distance, _offset);
+      perspCamera.position.copy(preset.target).add(_offset);
+      orthoCamera.position.copy(perspCamera.position);
+      syncOrthoFrustumFromDistance(preset.distance);
+
+      activeCamera.lookAt(controls.target);
+      controls.update();
+      syncSlidersFromCamera();
+      requestRender();
+    }
+
+    function transitionToPreset(name) {
+      const preset = PRESETS[name];
+      if (!preset) return;
+      document.body.dataset.preset = name;
+      presetButtons.forEach((b) => b.classList.toggle('active', b.dataset.preset === name));
+
+      if (isSoftwareGl) {
+        applyCameraImmediate(preset);
+        return;
+      }
+
+      sphericalToOffset(preset.azimuth, preset.elevation, preset.distance, _offset);
+      transition.targetLook.copy(preset.target);
+      transition.targetPos.copy(preset.target).add(_offset);
+      transition.targetFov = preset.fov;
+      transition.targetOrthoHalfH = preset.distance * Math.tan((preset.fov * DEG2RAD) / 2);
+      transition.active = true;
+      requestRender();
+    }
+
+    function setProjection(mode) {
+      if (mode === projectionMode) return;
+      transition.active = false;
+
+      _offset.copy(activeCamera.position).sub(controls.target);
+      const currentDist = Math.max(8, _offset.length());
+      const dir = _offset.clone().normalize();
+
+      if (mode === 'orthographic') {
+        syncOrthoFrustumFromDistance(currentDist);
+        orthoCamera.position.copy(controls.target).addScaledVector(dir, Math.max(currentDist, 140));
+        orthoCamera.lookAt(controls.target);
+        activeCamera = orthoCamera;
+      } else {
+        const visibleH = (orthoCamera.top - orthoCamera.bottom) / Math.max(0.01, orthoCamera.zoom);
+        const targetDist = THREE.MathUtils.clamp(
+          visibleH / (2 * Math.tan((perspCamera.fov * DEG2RAD) / 2)),
+          controls.minDistance,
+          controls.maxDistance
+        );
+        perspCamera.position.copy(controls.target).addScaledVector(dir, targetDist);
+        perspCamera.lookAt(controls.target);
+        activeCamera = perspCamera;
+      }
+
+      projectionMode = mode;
+      controls.object = activeCamera;
+      transformControls.camera = activeCamera;
+      controls.update();
+
+      document.body.dataset.projection = mode;
+      const isOrtho = mode === 'orthographic';
+      btnPersp.classList.toggle('active', !isOrtho);
+      btnPersp.setAttribute('aria-pressed', String(!isOrtho));
+      btnOrtho.classList.toggle('active', isOrtho);
+      btnOrtho.setAttribute('aria-pressed', String(isOrtho));
+      fovWrapper.classList.toggle('disabled', isOrtho);
+      sliderFov.disabled = isOrtho;
+
+      syncSlidersFromCamera();
+      requestRender();
+    }
+
+    function applyOrbitFromSliders() {
+      if (isUpdatingSliders) return;
+      transition.active = false;
+      const az = Number(sliderAz.value);
+      const el = Number(sliderEl.value);
+      valAz.textContent = `${az}°`;
+      valEl.textContent = `${el}°`;
+
+      _offset.copy(activeCamera.position).sub(controls.target);
+      const radius = Math.max(8, _offset.length());
+      sphericalToOffset(az, el, radius, _offset);
+      activeCamera.position.copy(controls.target).add(_offset);
+      activeCamera.lookAt(controls.target);
+      controls.update();
+      requestRender();
+    }
+
+    sliderFov.addEventListener('input', () => {
+      if (isUpdatingSliders) return;
+      transition.active = false;
+      const fov = Number(sliderFov.value);
+      valFov.textContent = `${fov}°`;
+      perspCamera.fov = fov;
+      perspCamera.updateProjectionMatrix();
+      requestRender();
+    });
+
+    sliderAz.addEventListener('input', applyOrbitFromSliders);
+    sliderEl.addEventListener('input', applyOrbitFromSliders);
+
+    btnPersp.addEventListener('click', () => setProjection('perspective'));
+    btnOrtho.addEventListener('click', () => setProjection('orthographic'));
+    presetButtons.forEach((btn) => btn.addEventListener('click', () => transitionToPreset(btn.dataset.preset)));
+
+    let controlsListOpen = false;
+    function setControlsOpen(open) {
+      controlsListOpen = open;
+      document.body.classList.toggle('controls-open', open);
+      document.body.dataset.controls = open ? 'open' : 'closed';
+      controlsBtn.classList.toggle('active', open);
+      controlsBtn.setAttribute('aria-pressed', String(open));
+      controlsBtn.setAttribute('aria-expanded', String(open));
+    }
+    controlsBtn.addEventListener('click', () => setControlsOpen(!controlsListOpen));
+    controlsCloseBtn.addEventListener('click', () => setControlsOpen(false));
+
+    function toggleUi() {
+      const hidden = document.body.classList.toggle('ui-hidden');
+      document.body.dataset.ui = hidden ? 'hidden' : 'visible';
+      toggleUiBtn.textContent = hidden ? 'Show UI' : 'Hide UI';
+      toggleUiBtn.setAttribute('aria-pressed', String(hidden));
+    }
+    toggleUiBtn.addEventListener('click', toggleUi);
+
+    function setEditorMode(mode) {
+      transformControls.setMode(mode);
+      editorModeBtns.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+      requestRender();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Escape' && controlsListOpen) {
+        setControlsOpen(false);
+        return;
+      }
+      if (e.key === '?') {
+        setControlsOpen(!controlsListOpen);
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === 'h') toggleUi();
+      if (editorOpen && k === 't') setEditorMode('translate');
+      if (editorOpen && k === 'r') setEditorMode('rotate');
+      if (editorOpen && k === 's') setEditorMode('scale');
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const wasGizmoVisible = gizmoHelper.visible;
+      gizmoHelper.visible = false;
+      const prevRatio = renderer.getPixelRatio();
+      const exportRatio = isSoftwareGl ? 1 : Math.min(2, Math.max(window.devicePixelRatio || 1, 2));
+      if (exportRatio !== prevRatio) {
+        renderer.setPixelRatio(exportRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+      }
+      renderer.render(scene, activeCamera);
+      const dataUrl = renderer.domElement.toDataURL('image/png');
+      gizmoHelper.visible = wasGizmoVisible;
+      if (exportRatio !== prevRatio) {
+        renderer.setPixelRatio(prevRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+      }
+      renderer.render(scene, activeCamera);
+
+      const link = document.createElement('a');
+      link.download = `sman66-jakarta-maquette-${projectionMode}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    controls.addEventListener('start', () => { transition.active = false; });
+    controls.addEventListener('change', () => {
+      if (!transition.active) syncSlidersFromCamera();
+      requestRender();
+    });
+
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const aspect = w / h;
+      perspCamera.aspect = aspect;
+      perspCamera.updateProjectionMatrix();
+      const halfH = (orthoCamera.top - orthoCamera.bottom) / 2;
+      orthoCamera.left = -halfH * aspect;
+      orthoCamera.right = halfH * aspect;
+      orthoCamera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      requestRender();
+    });
+
+    // =========================================================================
+    // 9. ON-DEMAND RENDER LOOP WITH SOFTWARE-WEBGL FENCE PACING
+    // =========================================================================
+    let renderBusy = false;
+    let renderDirty = false;
+    let lastTime = performance.now();
+
+    function afterDraw(cb) {
+      const gl = renderer.getContext();
+      if (gl && typeof gl.fenceSync === 'function') {
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gl.flush();
+        const poll = () => {
+          const state = sync && gl.getSyncParameter(sync, gl.SYNC_STATUS);
+          if (state === gl.UNSIGNALED) {
+            window.setTimeout(poll, 5);
+          } else {
+            if (sync) gl.deleteSync(sync);
+            window.setTimeout(cb, 60);
+          }
+        };
+        window.setTimeout(poll, 5);
+      } else {
+        window.setTimeout(cb, 60);
+      }
+    }
+
+    function stepFrame(now) {
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      lastTime = now;
+      let needsAnotherFrame = false;
+
+      if (transition.active) {
+        const k = 7.5;
+        const alpha = 1 - Math.exp(-k * dt);
+        activeCamera.position.lerp(transition.targetPos, alpha);
+        controls.target.lerp(transition.targetLook, alpha);
+
+        if (projectionMode === 'perspective') {
+          perspCamera.fov = THREE.MathUtils.lerp(perspCamera.fov, transition.targetFov, alpha);
+          perspCamera.updateProjectionMatrix();
+        } else {
+          const aspect = window.innerWidth / window.innerHeight;
+          const curHalfH = (orthoCamera.top - orthoCamera.bottom) / 2;
+          const nextHalfH = THREE.MathUtils.lerp(curHalfH, transition.targetOrthoHalfH, alpha);
+          orthoCamera.left = -nextHalfH * aspect;
+          orthoCamera.right = nextHalfH * aspect;
+          orthoCamera.top = nextHalfH;
+          orthoCamera.bottom = -nextHalfH;
+          orthoCamera.zoom = THREE.MathUtils.lerp(orthoCamera.zoom, 1, alpha);
+          orthoCamera.updateProjectionMatrix();
+        }
+
+        syncSlidersFromCamera();
+        const posDist = activeCamera.position.distanceTo(transition.targetPos);
+        const tgtDist = controls.target.distanceTo(transition.targetLook);
+        if (posDist < 0.08 && tgtDist < 0.05) {
+          activeCamera.position.copy(transition.targetPos);
+          controls.target.copy(transition.targetLook);
+          transition.active = false;
+          syncSlidersFromCamera();
+        } else {
+          needsAnotherFrame = true;
+        }
+      }
+
+      const dampingMoving = controls.update();
+      if (dampingMoving) needsAnotherFrame = true;
+
+      renderer.render(scene, activeCamera);
+
+      const finish = () => {
+        renderBusy = false;
+        if (renderDirty || needsAnotherFrame) {
+          renderDirty = false;
+          requestRender();
+        }
+      };
+
+      if (isSoftwareGl) {
+        afterDraw(finish);
+      } else {
+        finish();
+      }
+    }
+
+    function requestRender() {
+      if (renderBusy) {
+        renderDirty = true;
+        return;
+      }
+      renderBusy = true;
+      lastTime = performance.now();
+      requestAnimationFrame(stepFrame);
+    }
+
+    applyCameraImmediate(PRESETS.isometric);
+  </script>
+</body>
+</html>
