@@ -9,10 +9,10 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
-      // Serve and emit the self-contained single-file index.html verbatim so its
-      // ES module importmap for three@0.187.0 is preserved intact in dev and build.
+      // Preserve the ES module importmap for three@0.187.0 in dev and production builds,
+      // while letting Vite bundle ./src/maquetteMath.ts cleanly into dist/assets/*.js.
       {
-        name: 'standalone-html-passthrough',
+        name: 'standalone-html-importmap-safe',
         configureServer(server) {
           server.middlewares.use((req, res, next) => {
             const urlPath = (req.url || '/').split('?')[0];
@@ -27,13 +27,20 @@ export default defineConfig(() => {
             next();
           });
         },
-        closeBundle(error?: Error): void {
-          if (error) return;
-          const distDir = path.resolve(__dirname, 'dist');
-          const htmlSrc = path.resolve(__dirname, 'index.html');
-          if (fs.existsSync(distDir) && fs.existsSync(htmlSrc)) {
-            fs.copyFileSync(htmlSrc, path.resolve(distDir, 'index.html'));
-          }
+        transformIndexHtml: {
+          order: 'post',
+          handler(html) {
+            const importmapMatch = html.match(/<script\s+type=["']importmap["'][\s\S]*?<\/script>/i);
+            if (!importmapMatch) return html;
+            const importmapTag = importmapMatch[0];
+            const firstModuleIdx = html.search(/<script\b[^>]*type=["']module["']/i);
+            const importmapIdx = html.indexOf(importmapTag);
+            if (firstModuleIdx !== -1 && importmapIdx > firstModuleIdx) {
+              const withoutMap = html.replace(importmapTag, '');
+              return withoutMap.replace(/<head([^>]*)>/i, `<head$1>\n  ${importmapTag}`);
+            }
+            return html;
+          },
         },
       },
     ],
